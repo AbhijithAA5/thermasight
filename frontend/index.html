@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ThermaSight</title>
+    <title>ThermaSight — Intelligent Energy &amp; Equipment Monitoring</title>
     <meta
       name="description"
       content="Intelligent energy and equipment monitoring: unsupervised ML learns each chiller's normal behaviour and turns meaningful deviations into evidence and action."
@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/app.css" />
   </head>
   <body class="ts-page-bg">
+    <a class="ts-skip" href="#view">Skip to content</a>
     <div class="ts-app">
       <header class="ts-header">
         <div class="ts-header-inner">
@@ -33,7 +34,7 @@
                 />
               </svg>
               <span class="ts-brand-name">ThermaSight</span>
-              <span class="ts-brand-sub">chiller intelligence</span>
+              <span class="ts-brand-sub">chiller intelligence · console</span>
             </span>
           </button>
           <nav class="ts-tabs" aria-label="Sections">
@@ -47,7 +48,7 @@
         </div>
       </header>
 
-      <main id="view"></main>
+      <main id="view" tabindex="-1"></main>
 
       <footer class="ts-footer">
         <span>ThermaSight</span>
@@ -59,22 +60,22 @@
     <!-- episode investigation drawer -->
     <div class="ts-drawer-layer" id="drawer-layer" hidden>
       <button class="ts-drawer-backdrop" id="drawer-close" aria-label="Close investigation"></button>
-      <aside class="ts-drawer" role="dialog" aria-modal="true" aria-label="Anomaly investigation">
+      <aside class="ts-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="-1">
         <div class="ts-drawer-head">
           <div class="flex items-center gap-2" id="drawer-head"></div>
-          <button class="ts-icon-btn" id="drawer-close-x" aria-label="Close"><span aria-hidden="true">✕</span></button>
+          <button class="ts-icon-btn" id="drawer-close-x" aria-label="Close investigation"><span aria-hidden="true">✕</span></button>
         </div>
         <div class="ts-drawer-scroll" id="drawer-body"></div>
       </aside>
     </div>
 
     <!-- analysis progress overlay -->
-    <div class="ts-progress-layer" id="progress-layer" hidden>
+    <div class="ts-progress-layer" id="progress-layer" hidden role="status" aria-live="polite">
       <div class="ts-progress-card">
         <p class="ts-progress-stage mono" id="progress-stage">Analysing</p>
-        <p class="ts-progress-detail mono" id="progress-detail">running the ML pipeline server-side</p>
-        <div class="ts-progress-track" aria-hidden="true"><div class="ts-progress-fill" id="progress-fill" style="width: 6%"></div></div>
-        <p class="ts-progress-pct mono" id="progress-pct">…</p>
+        <ol class="ts-progress-log mono" id="progress-log" aria-label="Pipeline stages"></ol>
+        <div class="ts-progress-track" aria-hidden="true"><div class="ts-progress-fill" id="progress-fill" style="width: 4%"></div></div>
+        <p class="ts-progress-pct mono" id="progress-pct">t+0s</p>
       </div>
     </div>
 

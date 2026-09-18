@@ -249,15 +249,15 @@ function renderFleet() {
     .sort((a, b) => (SEV_CODE[b.severity] - SEV_CODE[a.severity]) || (b.peakScore - a.peakScore))
     .slice(0, 7);
 
-  const kpi = (label, value, sub, extra = "") =>
-    `<div class="ts-kpi"><span class="ts-kpi-label">${label}</span><span class="ts-kpi-value mono">${value}</span><span class="ts-kpi-sub ${extra}">${sub}</span></div>`;
+  const kpi = (label, value, sub, extra = "", count = null, fmt = null) =>
+    `<div class="ts-kpi"><span class="ts-kpi-label">${label}</span><span class="ts-kpi-value mono" data-count="${count ?? ""}" data-fmt="${fmt ?? ""}">${value}</span><span class="ts-kpi-sub ${extra}">${sub}</span></div>`;
 
   const cards = ids
     .map((eq) => {
       const rep = s.equipment[eq];
       const worst = rep.episodes[0];
       return `
-      <article class="ts-panel ts-unit-card" data-unit-card="${eq}">
+      <article class="ts-panel ts-unit-card ts-entrance" data-unit-card="${eq}">
         <div class="flex items-start gap-2">
           <div data-gauge="${eq}"></div>
           <div class="min-w-0 grow">
@@ -284,7 +284,7 @@ function renderFleet() {
   const queueRows = queue
     .map(
       (ep) => `
-      <li><button class="ts-queue-row" data-episode-id="${ep.id}">
+      <li class="ts-entrance"><button class="ts-queue-row" data-episode-id="${ep.id}">
         <div class="flex items-center gap-2"><span class="mono ts-queue-equip">${esc(ep.equipmentId)}</span>${sevChip(ep.severity)}</div>
         <div class="ts-queue-meta mono">${fmtTime(ep.startTime)} · score ${fmtSig(ep.peakScore, 2)}</div>
         <div class="ts-queue-pattern">${patternLabel(ep.patternTags[0] || "contextual_energy_spike")}</div>
@@ -295,11 +295,11 @@ function renderFleet() {
   viewEl().innerHTML = `
     <main class="ts-container ts-page">
       <div class="ts-kpi-band">
-        ${kpi("Fleet energy", fmtEnergy(stat.energyTotalKwh), "across the observation period", "mono")}
+        ${kpi("Fleet energy", fmtEnergy(stat.energyTotalKwh), "across the observation period", "mono", stat.energyTotalKwh, "fmtEnergy")}
         ${kpi("Anomalies", s.episodes.length,
-          `${stat.bySeverity.action ? `<span class="ts-kpi-chip ts-chip-action">${stat.bySeverity.action} action</span>` : ""}${stat.bySeverity.alert ? `<span class="ts-kpi-chip ts-chip-alert">${stat.bySeverity.alert} alert</span>` : ""}${stat.bySeverity.watch ? `<span class="ts-kpi-chip ts-chip-warn">${stat.bySeverity.watch} watch</span>` : ""}`, "")}
-        ${kpi("Units at risk", `${stat.atRisk.length}<span class="ts-kpi-denom">/${ids.length}</span>`, "health below 60", "mono")}
-        ${kpi("Fleet health", `${avgHealth}<span class="ts-kpi-denom">/100</span>`, "learned from recent behaviour", "mono")}
+          `${stat.bySeverity.action ? `<span class="ts-kpi-chip ts-chip-action">${stat.bySeverity.action} action</span>` : ""}${stat.bySeverity.alert ? `<span class="ts-kpi-chip ts-chip-alert">${stat.bySeverity.alert} alert</span>` : ""}${stat.bySeverity.watch ? `<span class="ts-kpi-chip ts-chip-warn">${stat.bySeverity.watch} watch</span>` : ""}`, "", s.episodes.length)}
+        ${kpi("Units at risk", `${stat.atRisk.length}<span class="ts-kpi-denom">/${ids.length}</span>`, "health below 60", "mono", stat.atRisk.length)}
+        ${kpi("Fleet health", `${avgHealth}<span class="ts-kpi-denom">/100</span>`, "learned from recent behaviour", "mono", avgHealth)}
       </div>
       <div class="grid-fleet">
         <div>
@@ -315,6 +315,12 @@ function renderFleet() {
         </aside>
       </div>
     </main>`;
+
+  $$("[data-count]").forEach((el) => {
+    if (el.dataset.count !== "") {
+      countUp(el, Number(el.dataset.count), el.dataset.fmt === "fmtEnergy" ? { fmt: fmtEnergy } : {});
+    }
+  });
 
   ids.forEach((eq) => {
     Gauge($(`[data-gauge="${eq}"]`), s.equipment[eq].health);
@@ -488,7 +494,7 @@ function renderAnomalies() {
   const cards = list
     .map(
       (ep) => `
-      <li><button class="ts-anomaly-card" data-episode-id="${ep.id}">
+      <li class="ts-entrance"><button class="ts-anomaly-card" data-episode-id="${ep.id}">
         <div class="flex items-center gap-2"><span class="mono ts-anomaly-equip">${esc(ep.equipmentId)}</span>${sevChip(ep.severity)}</div>
         <div class="ts-anomaly-time mono">${fmtTime(ep.startTime)} · ${fmtDurationHours(ep.durationHours)}</div>
         <div class="ts-anomaly-meta">${ep.patternTags.slice(0, 2).map(tagChip).join("")}<span class="ts-anomaly-score mono">peak ${fmtSig(ep.peakScore, 2)}</span></div>
@@ -694,6 +700,10 @@ async function readAndAnalyse(file) {
 
 /* ------------------------------ drawer ------------------------------ */
 
+function tsDrawerEsc(e) {
+  if (e.key === "Escape") closeDrawer();
+}
+
 function openEpisode(episodeId) {
   if (!state.result) return;
   const s = state.result;
@@ -771,8 +781,11 @@ function openEpisode(episodeId) {
       <ol class="ts-recs">${recs}</ol>
     </section>`;
 
+  document.addEventListener("keydown", tsDrawerEsc, { once: true });
   $("#drawer-layer").hidden = false;
   document.body.style.overflow = "hidden";
+  const cx = $("#drawer-close-x");
+  if (cx) cx.focus();
 }
 
 function closeDrawer() {
@@ -783,19 +796,54 @@ function closeDrawer() {
 
 /* ------------------------------ progress ------------------------------ */
 
+function countUp(el, to, { dur = 700, fmt } = {}) {
+  const target = Number(to);
+  if (!Number.isFinite(target)) return;
+  const f = fmt || ((v) => v.toLocaleString("en-US"));
+  const t0 = performance.now();
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  const tick = (now) => {
+    const p = Math.min(1, (now - t0) / dur);
+    el.textContent = f(Math.round(target * ease(p)));
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 function showProgress(show, detail) {
-  $("#progress-layer").hidden = !show;
+  const layer = $("#progress-layer");
+  layer.hidden = !show;
+  clearInterval(window.__tsProgressTimer);
   if (show) {
-    $("#progress-detail").textContent = detail || "running the ML pipeline server-side";
-    const stage = ["Ingesting data", "Feature engineering", "Training models", "Scoring and detection", "Interpreting episodes"];
+    const log = $("#progress-log");
+    const pct = $("#progress-pct");
+    const fill = $("#progress-fill");
+    if (log) log.innerHTML = "";
+    const stages = [
+      "parsing csv contract",
+      "imputing gaps · building features",
+      "training per-unit models",
+      "scoring · fusing evidence",
+      "interpreting episodes",
+      "assembling report",
+    ];
     let i = 0;
-    clearInterval(window.__tsProgressTimer);
+    const t0 = Date.now();
     window.__tsProgressTimer = setInterval(() => {
-      i = (i + 1) % stage.length;
-      $("#progress-stage").textContent = stage[i];
-    }, 2600);
-  } else {
-    clearInterval(window.__tsProgressTimer);
+      const s = Math.floor((Date.now() - t0) / 1000);
+      pct.textContent = `t+${s}s · pipeline server-side`;
+    }, 250);
+    const pushStage = () => {
+      if (i >= stages.length || !log) return;
+      const li = document.createElement("li");
+      li.textContent = stages[i];
+      log.appendChild(li);
+      log.scrollTop = log.scrollHeight;
+      i++;
+      if (fill) fill.style.width = Math.min(96, 8 + i * 15) + "%";
+      setTimeout(pushStage, 780 + Math.random() * 420);
+    };
+    setTimeout(pushStage, 140);
   }
 }
 
@@ -1054,15 +1102,23 @@ function TimeSeriesChart(holder, props) {
     const hv = values[i];
     const hy = hv === null || hv === undefined ? (lo + hi) / 2 : y(hv);
     const band = bands.find((bb) => i >= bb.startIndex && i <= bb.endIndex);
-    const tooltipX = Math.min(Math.max(hx - 90, CHART_PAD.l), CHART_W - CHART_PAD.r - 130);
+    const win = values.slice(Math.max(0, i - 48), i).filter((v) => v !== null && v !== undefined);
+    let delta = null;
+    if (hv !== null && hv !== undefined && win.length >= 8) {
+      const sorted = win.slice().sort((a, b) => a - b);
+      delta = hv - sorted[sorted.length >> 1];
+    }
+    const tipH = band ? (delta != null ? 66 : 52) : delta != null ? 52 : 38;
+    const tooltipX = Math.min(Math.max(hx - 90, CHART_PAD.l), CHART_W - CHART_PAD.r - 150);
     crosshair.innerHTML = `
       <line x1="${hx}" x2="${hx}" y1="${CHART_PAD.t}" y2="${CHART_PAD.t + CHART_INNER_H}" stroke="${axLabel}" stroke-width="1" stroke-dasharray="3 3"/>
       <circle cx="${hx}" cy="${hy}" r="3.4" fill="${cssVar("--ts-accent")}" stroke="${cssVar("--ts-bg")}" stroke-width="1.5"/>
       <g transform="translate(${tooltipX}, ${CHART_PAD.t + 4})">
-        <rect width="130" height="${band ? 52 : 38}" rx="6" fill="${cssVar("--ts-panel2")}" stroke="${cssVar("--ts-hair")}"/>
+        <rect width="150" height="${tipH}" rx="6" fill="${cssVar("--ts-panel2")}" stroke="${cssVar("--ts-hair")}"/>
         <text x="10" y="18" class="ts-tooltip-main">${fmtTime(times[i])}</text>
         <text x="10" y="34" class="ts-tooltip-sub">${hv === null || hv === undefined ? "-" : Number(hv).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${unit}</text>
-        ${band ? `<text x="10" y="48" class="ts-tooltip-sub" fill="${SEV_CHART[band.severity]}">${SEVERITY[band.severity].label} anomaly</text>` : ""}
+        ${delta != null ? `<text x="10" y="${band ? 50 : 48}" class="ts-tooltip-sub" fill="${delta >= 0 ? cssVar("--ts-alert") : cssVar("--ts-ok")}">Δ ${delta >= 0 ? "+" : "−"}${Math.abs(Number(delta)).toLocaleString("en-US", { maximumFractionDigits: 2 })} vs 24 h baseline</text>` : ""}
+        ${band ? `<text x="10" y="${delta != null ? 64 : 48}" class="ts-tooltip-sub" fill="${SEV_CHART[band.severity]}">${SEVERITY[band.severity].label} anomaly</text>` : ""}
       </g>`;
   });
   chartSvg.addEventListener("pointerleave", () => (crosshair.innerHTML = ""));
