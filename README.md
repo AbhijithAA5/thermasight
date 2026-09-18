@@ -1,5 +1,7 @@
 # ThermaSight — Intelligent Energy & Equipment Monitoring
 
+[![CI](https://github.com/AbhijithAA5/thermasight/actions/workflows/ci.yml/badge.svg)](https://github.com/AbhijithAA5/thermasight/actions/workflows/ci.yml)
+
 Submission for **YUKTHI 2026** (National-Level Hackathon, *Intelligent Energy &
 Equipment Monitoring* track). Built and verified against the supplied
 development dataset and the official Data Specification.
