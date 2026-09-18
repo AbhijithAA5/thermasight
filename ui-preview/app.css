@@ -1,0 +1,243 @@
+/* ============================================================
+   ThermaSight — console design layer
+   Handcrafted instrument: hairline structure, teal-on-petrol
+   datum lamps, tabular mono numerals. Loaded after styles.css
+   (wins the cascade at equal specificity).
+   ============================================================ */
+
+/* ---- tokens: locked brand + status ---- */
+:root {
+  --ts-scan: linear-gradient(90deg, transparent, rgba(56, 199, 181, 0.22), transparent);
+  --ts-scan-dur: 4s;
+  --ts-ease: cubic-bezier(0.2, 0, 0, 1);
+  --ts-enter: 200ms;
+}
+
+/* ---- typography: every numeral is tabular ---- */
+.mono,
+.ts-kpi-value,
+.ts-kpi-label,
+.ts-axis-label,
+.ts-chart-sub,
+.ts-q-grid dt,
+.ts-q-grid dd,
+.ts-tooltip-main,
+.ts-tooltip-sub,
+.ts-ep-time,
+.ts-ep-detail,
+.ts-anomaly-time,
+.ts-progress-stages,
+.ts-progress-pct {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- skip link ---- */
+.ts-skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 1000;
+  background: var(--ts-accent);
+  color: #06120f;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: top 0.12s var(--ts-ease);
+}
+.ts-skip:focus-visible {
+  top: 12px;
+}
+
+/* ---- focus system (never remove the ring; replace it) ---- */
+:focus-visible {
+  outline: 2px solid var(--ts-accent) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(56, 199, 181, 0.14);
+  border-radius: 4px;
+}
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ---- brand: datum lamp pulse ---- */
+.ts-brand-mark {
+  transform-origin: center;
+  animation: tsLamp 4.2s var(--ts-ease) infinite;
+}
+@keyframes tsLamp {
+  0%, 88%, 100% { opacity: 1; }
+  92% { opacity: 0.55; }
+  96% { opacity: 1; }
+}
+
+/* ---- KPI band: hairline separators, not gaps ---- */
+.ts-kpi-band {
+  gap: 1px;
+  background: var(--ts-hair);
+  border: 1px solid var(--ts-hair);
+  border-radius: var(--ts-radius);
+  overflow: hidden;
+}
+.ts-kpi {
+  background: var(--ts-panel);
+  padding: 18px 20px;
+  margin: 0;
+}
+.ts-kpi-value {
+  transition: color 0.12s var(--ts-ease);
+}
+.ts-kpi-chip { background: #101a24; }
+
+/* ---- entrance stagger (cards, queue, anomaly rows) ---- */
+.ts-entrance {
+  animation: tsRise var(--ts-enter) var(--ts-ease) both;
+}
+.ts-unit-card.ts-entrance:nth-child(1),
+.ts-entrance:nth-child(1) { animation-delay: 0ms; }
+.ts-entrance:nth-child(2) { animation-delay: 40ms; }
+.ts-entrance:nth-child(3) { animation-delay: 80ms; }
+.ts-entrance:nth-child(4) { animation-delay: 120ms; }
+.ts-entrance:nth-child(5) { animation-delay: 160ms; }
+.ts-entrance:nth-child(6) { animation-delay: 200ms; }
+.ts-entrance:nth-child(7) { animation-delay: 240ms; }
+@keyframes tsRise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- queue rows: hairline rhythm ---- */
+.ts-queue-row {
+  border-left: 2px solid transparent;
+  transition: border-color 0.12s var(--ts-ease), background 0.12s var(--ts-ease);
+}
+.ts-queue-row:hover {
+  border-left-color: var(--ts-accent);
+  background: rgba(56, 199, 181, 0.05);
+}
+
+/* ---- analysis overlay: streaming log ---- */
+.ts-progress-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 8em;
+  max-height: 12em;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--ts-text-mut);
+}
+.ts-progress-log li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  animation: tsLogIn 0.18s var(--ts-ease) both;
+}
+.ts-progress-log li::before {
+  content: "›";
+  color: var(--ts-accent);
+}
+@keyframes tsLogIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.ts-progress-fill {
+  transition: width 0.4s var(--ts-ease);
+}
+
+/* ---- chart: crosshair + tooltip polish ---- */
+.ts-tooltip-main {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--ts-text);
+}
+.ts-tooltip-sub {
+  font-size: 11px;
+  fill: var(--ts-text-mut);
+}
+
+/* ---- chart panel head: instrument label ---- */
+.ts-chart-sub::after {
+  content: "";
+  display: block;
+  height: 1px;
+  margin-top: 8px;
+  background: var(--ts-hair);
+}
+
+/* ---- empty states carry a datum, never a blank ---- */
+.ts-empty::after {
+  content: "· console idle " attr(data-ts);
+  color: var(--ts-text-mut);
+}
+.ts-empty[data-ts] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- tables & grids: hairline density ---- */
+.ts-q-grid {
+  border: 1px solid var(--ts-hair);
+  border-radius: var(--ts-radius);
+  overflow: hidden;
+}
+.ts-q-grid > div {
+  background: var(--ts-panel);
+}
+.ts-q-grid > div + div {
+  border-top: 1px solid var(--ts-hair);
+}
+
+/* ---- drawer: surgical slide + hairline seam ---- */
+.ts-drawer {
+  animation: tsDrawerIn 0.32s var(--ts-ease) both;
+  border-left: 1px solid var(--ts-hair-strong, var(--ts-hair));
+}
+@keyframes tsDrawerIn {
+  from { transform: translateX(32px); opacity: 0.6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.ts-drawer-backdrop {
+  transition: opacity 0.32s var(--ts-ease);
+}
+
+/* ---- pills & tabs: state changes are hairlines, not jumps ---- */
+.ts-pill, .ts-tab {
+  transition: border-color 0.12s var(--ts-ease), color 0.12s var(--ts-ease), background 0.12s var(--ts-ease);
+}
+.ts-pill-active, .ts-tab-active {
+  border-color: var(--ts-accent);
+}
+
+/* ============================================================
+   Responsive (320 / 768 / 1024 / 1440)
+   ============================================================ */
+@media (max-width: 1024px) {
+  .ts-header-inner { flex-wrap: wrap; row-gap: 8px; }
+  .ts-kpi-band { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .ts-kpi-value { font-size: 20px; }
+  .ts-unit-grid { grid-template-columns: 1fr; }
+  .grid-fleet { grid-template-columns: 1fr; }
+  .ts-drawer { width: 100vw; }
+  .ts-hero-cta { flex-direction: column; align-items: stretch; }
+  .ts-hero-cta .ts-btn { width: 100%; }
+}
+@media (max-width: 480px) {
+  .ts-header-brand-sub { display: none; }
+  .ts-footer-mid { display: none; }
+  .ts-kpi { padding: 12px 14px; }
+}
+
+/* ---- reduced motion: the console goes still, not dead ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}
