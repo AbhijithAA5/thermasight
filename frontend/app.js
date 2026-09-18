@@ -216,10 +216,9 @@ function renderHero() {
             that matter, with the evidence and the next step.
           </p>
           <div class="ts-hero-cta">
-            <button class="ts-btn ts-btn-primary" id="btn-real">Analyse real YUKTHI dataset</button>
-            <button class="ts-btn ts-btn-ghost" id="btn-upload">Upload CSV</button>
+            <button class="ts-btn ts-btn-primary" id="btn-upload">Upload CSV</button>
           </div>
-          <p class="ts-hero-note">Run the full 25,003-row YUKTHI development dataset (3 chillers, 10 months), or drop your own CSV into the Data tab.</p>
+          <p class="ts-hero-note">Upload a CSV that follows the YUKTHI 2026 data specification, or open the Data tab to run the bundled 25,003-row development dataset.</p>
         </div>
       <section class="ts-how">
         ${howCard("Learn", "Two models per unit: an isolation forest over all measurements, and a network that predicts expected energy from load, water temperatures and ambient conditions.")}
@@ -227,7 +226,6 @@ function renderHero() {
         ${howCard("Act", "Each anomaly carries its contributing measurements, a plain-language narrative and evidence-based recommendations for investigation.")}
       </section>
     </main>`;
-  $("#btn-real").addEventListener("click", analyseReal);
   $("#btn-upload").addEventListener("click", () => setTab("data"));
 }
 
