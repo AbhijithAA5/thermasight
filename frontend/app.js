@@ -620,6 +620,7 @@ function renderData() {
           return `<div class="ts-q-missing-row"><span>${c}</span><span class="mono ${n > 0 ? "ts-tx-warn" : "ts-tx-ok"}">${n > 0 ? `${n} (${((n / q.rowCount) * 100).toFixed(3)}%)` : "0"}</span></div>`;
         }).join("")}
       </div>
+      ${q.missingColumns && q.missingColumns.length ? `<div class="ts-q-absent mono ts-tx-warn">⚠ entire columns absent from file (treated as fully missing, excluded from modelling): ${q.missingColumns.join(", ")}</div>` : ""}
       <div class="ts-q-foot mono">
         ${q.duplicatePairs === 0 ? '<span class="ts-tx-ok">✓ record identity clean</span>' : `<span class="ts-tx-warn">⚠ duplicate pairs found, first occurrence kept</span>`}
         ${q.badRows > 0 ? `<span class="ts-tx-warn">⚠ ${q.badRows} rows skipped (invalid timestamp or unit)</span>` : ""}

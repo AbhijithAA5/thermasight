@@ -197,6 +197,8 @@ def build_dataset(text: str, file_name: str) -> dict:
 
     missing_by_column = {}
     for c in NUMERIC_COLS:
+        if c in missing_measurements:
+            continue  # absent columns are reported separately in missingColumns
         miss = sum(1 for e in equipment_ids for o in groups[e].observed[c] if not o)
         if miss:
             missing_by_column[c] = miss
