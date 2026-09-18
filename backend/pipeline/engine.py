@@ -1,0 +1,168 @@
+"""ThermaSight — pipeline orchestrator. Data -> quality -> imputation ->
+features -> models (Isolation Forest + contextual residual MLP) -> fusion
+scoring -> episodes -> interpretation. Pure numpy, deterministic seeds."""
+
+from __future__ import annotations
+
+import math
+import time
+
+import numpy as np
+
+from .features import WARMUP, build_features, impute_series, median
+from .interpretation import analyze_contributors, build_narrative, detect_patterns, time_label
+from .models import IsolationForest, MLPRegressor, quantile_sorted
+from .parser import build_dataset
+from .recommendations import recommendations_for_patterns
+from .scoring import (compute_health, degradation_trend, episode_shell, equipment_stats,
+                      score_series)
+from .types import SEVERITY_RANK, NUMERIC_COLS, Series
+
+SEVERITY_CODE = {"normal": 0, "watch": 1, "alert": 2, "action": 3}
+CODE_SEVERITY = {0: "normal", 1: "watch", 2: "alert", 3: "action"}
+
+
+def median_interval(times: list[int]) -> int:
+    if len(times) < 2:
+        return 1_800_000
+    ints = sorted(times[i] - times[i - 1] for i in range(1, len(times)))
+    return ints[len(ints) // 2]
+
+
+def _run_equipment(s: Series, nominal_minutes: int) -> dict:
+    imputed = impute_series(s, nominal_minutes)
+    feats = build_features(imputed)
+    n = len(s.times)
+    train_from = min(WARMUP, n)
+
+    forest = IsolationForest()
+    forest.fit(feats["ifX"][train_from:], 80, 256, 7 + len(s.equipment_id))
+    if_score = forest.score(feats["ifX"])
+
+    mlp = MLPRegressor(hidden=24)
+    mlp.fit(feats["mlpX"][train_from:], feats["y"][train_from:],
+            epochs=150, seed=11 + len(s.equipment_id))
+    pred = mlp.predict(feats["mlpX"])
+
+    # Residual with bias corrections (hour-of-day median, expected-value bins).
+    resid = feats["y"] - pred
+    hour_samples: list[list[float]] = [[] for _ in range(24)]
+    for i in range(train_from, n):
+        hour_samples[min(23, int(s.hours[i]))].append(float(resid[i]))
+    hour_med = [median(vals) for vals in hour_samples]
+    resid_hour_adj = np.array([
+        resid[i] - hour_med[min(23, int(s.hours[i]))] if i >= train_from else resid[i]
+        for i in range(n)
+    ])
+    bins = 8
+    pred_lo = float(pred[train_from:].min())
+    pred_hi = float(pred[train_from:].max())
+    bin_of = lambda v: min(bins - 1, max(0, int(((v - pred_lo) / (pred_hi - pred_lo or 1.0)) * bins)))
+    bin_samples: list[list[float]] = [[] for _ in range(bins)]
+    for i in range(train_from, n):
+        bin_samples[bin_of(float(pred[i]))].append(float(resid_hour_adj[i]))
+    bin_med = [median(vals) for vals in bin_samples]
+    resid_adj = np.array([
+        resid_hour_adj[i] - bin_med[bin_of(float(pred[i]))] if i >= train_from else resid_hour_adj[i]
+        for i in range(n)
+    ])
+    abs_devs = np.sort(np.abs(resid_adj[train_from:]))
+    resid_scale = 1.4826 * (float(abs_devs[len(abs_devs) // 2]) if abs_devs.size else 1.0)
+    residual_z = resid_adj / (resid_scale or 1.0)
+
+    scored = score_series(if_score, residual_z)
+    trend = degradation_trend(residual_z, n)
+    health = compute_health(s.times, scored["score"], trend)
+    stats = equipment_stats(s)
+
+    episodes: list[dict] = []
+    for run in scored["runs"]:
+        shell = episode_shell(s.equipment_id, run, s, scored["score"], scored["severity"])
+        peak = shell["peakIndex"]
+        run_len = run[1] - run[0] + 1
+        contributors = analyze_contributors(imputed, peak, feats["stats"])
+        patterns = detect_patterns(
+            imputed, peak, run_len, float(residual_z[peak]), contributors, trend, feats["stats"]
+        ) or ["unclassified"]
+        narrative = build_narrative(s.equipment_id, time_label(s.times[peak]), contributors, patterns)
+        evidence = [
+            {"column": c["column"], "observed": c["value"], "expected": c["baselineMedian"],
+             "unit": c["unit"], "z": c["z"]}
+            for c in contributors[:3]
+        ]
+        episodes.append({
+            **shell,
+            "patternTags": patterns,
+            "narrative": narrative,
+            "contributors": contributors,
+            "evidence": evidence,
+            "recommendations": recommendations_for_patterns(patterns, shell["severity"]),
+        })
+
+    severity_codes = [SEVERITY_CODE[sev] for sev in scored["severity"]]
+    values_out: dict[str, list] = {}
+    for c in NUMERIC_COLS:
+        values_out[c] = [None if not math.isfinite(v) else round(v, 3) for v in imputed.data[c]]
+    return {
+        "equipmentId": s.equipment_id,
+        "score": [round(float(x), 4) for x in scored["score"]],
+        "severityCodes": severity_codes,
+        "threshold": round(float(scored["threshold"]), 4),
+        "health": health,
+        "degradationTrend": round(trend * 1000) / 1000,
+        "episodes": episodes,
+        "energyTotalKwh": stats["energyTotalKwh"],
+        "energyMeanKwh": stats["energyMeanKwh"],
+        "count": n,
+        "times": s.times,
+        "values": values_out,
+    }
+
+
+def run_pipeline(csv_text: str, file_name: str) -> dict:
+    t0 = time.time()
+    parsed = build_dataset(csv_text, file_name)
+    quality = parsed["quality"]
+    series = parsed["series"]
+    equipment_ids = sorted(series.keys())
+    nominal_ms = median_interval(series[equipment_ids[0]].times)
+    nominal_minutes = max(1, round(nominal_ms / 60_000))
+
+    equipment: dict[str, dict] = {}
+    for eq in equipment_ids:
+        equipment[eq] = _run_equipment(series[eq], nominal_minutes)
+
+    episodes: list[dict] = []
+    for eq in equipment_ids:
+        episodes.extend(equipment[eq]["episodes"])
+    episodes.sort(key=lambda e: (SEVERITY_RANK[e["severity"]], e["peakScore"]), reverse=True)
+
+    model = {
+        "isolationForest": {"trees": 80, "maxSamples": 256, "features": 18},
+        "residualModel": {"hiddenUnits": 24, "epochs": 150, "features": 16},
+        "fusion": {"ifWeight": 0.25, "residualWeight": 0.75,
+                   "thresholdQuantile": 0.975, "joinWindow": 12},
+        "runtimeMs": round((time.time() - t0) * 1000),
+    }
+
+    return {
+        "quality": quality,
+        "equipment": equipment,
+        "episodes": episodes,
+        "model": model,
+        "nominalIntervalMinutes": nominal_minutes,
+        "generatedAt": int(time.time() * 1000),
+    }
+
+
+def series_payload(result: dict, equipment_id: str, variable: str) -> dict:
+    """Per-unit arrays for the chart, fetched on demand."""
+    rep = result["equipment"][equipment_id]
+    return {
+        "equipmentId": equipment_id,
+        "variable": variable,
+        "times": rep["times"],
+        "values": rep.get("values", {}).get(variable, []),
+        "score": rep["score"],
+        "severityCodes": rep["severityCodes"],
+    }

@@ -1,0 +1,98 @@
+/* ThermaSight — vanilla additions on top of the design system (styles.css). */
+[hidden] {
+  display: none !important;
+}
+
+.block { display: block; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.items-center { align-items: center; }
+.items-baseline { align-items: baseline; }
+.justify-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-1 { gap: 4px; }
+.gap-1p5 { gap: 6px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.grow { flex: 1; }
+.min-w-0 { min-width: 0; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.cursor-pointer { cursor: pointer; }
+
+/* hero layout */
+.grid-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 40px;
+  align-items: center;
+}
+.max-w-hero { max-width: 46rem; }
+
+/* fleet layout */
+.grid-fleet {
+  display: grid;
+  grid-template-columns: 1fr 330px;
+  gap: 24px;
+}
+
+/* methodology models grid */
+.grid-models {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1000px) {
+  .grid-hero,
+  .grid-fleet,
+  .grid-models {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* progress overlay pulse on the indeterminate bar */
+@keyframes tsIndeterminate {
+  0% { width: 6%; }
+  60% { width: 88%; }
+  100% { width: 92%; }
+}
+#progress-fill {
+  animation: tsIndeterminate 4.5s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  #progress-fill {
+    animation: none;
+    width: 60%;
+  }
+}
+
+/* drag-over state for the dropzone */
+.ts-dropzone-over {
+  border-color: var(--ts-accent);
+  background: var(--ts-accent-soft);
+}
+
+.ts-chart-wrap svg {
+  touch-action: none;
+}
+
+.ts-brand-mark {
+  flex: none;
+}
