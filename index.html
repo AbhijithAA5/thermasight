@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="dark" />
 <title>ThermaSight — Intelligent Energy &amp; Equipment Monitoring</title>
-<meta name="description" content="ThermaSight: unsupervised ML learns each chiller's normal behaviour and turns meaningful deviations into evidence-backed action. FastAPI + numpy backend, vanilla frontend, one runnable zip." />
+<meta name="description" content="ThermaSight: unsupervised ML learns each chiller's normal behaviour and turns meaningful deviations into evidence-backed action. DETECT. UNDERSTAND. ASSESS. ACT." />
 <meta property="og:title" content="ThermaSight — Intelligent Energy &amp; Equipment Monitoring" />
-<meta property="og:description" content="YUKTHI 2026 submission. Unsupervised contextual anomaly detection for chiller fleets — detect, understand, assess, act." />
+<meta property="og:description" content="YUKTHI 2026 submission. Unsupervised contextual anomaly detection for chiller fleets." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://abhijithaa5.github.io/thermasight/" />
 <style>
@@ -16,71 +16,77 @@
   [hidden] { display: none !important; }
   html { scroll-behavior: smooth; }
   body {
-    background: #0A1118; color: #E8EEF4;
+    background: #0A0A0A; color: #F5F5F5;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     line-height: 1.55; min-height: 100vh;
     background-image:
-      linear-gradient(rgba(35,52,68,.28) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(35,52,68,.28) 1px, transparent 1px);
-    background-size: 48px 48px;
-    background-position: -1px -1px;
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-font-smoothing: antialiased;
   }
   .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
-  a { color: inherit; text-decoration: none; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 24px 72px; }
+  a { color: inherit; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 64px; }
   header.bar {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    border-bottom: 1px solid #233444; padding-bottom: 16px; margin-bottom: 48px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    border-bottom: 1px solid #242424; padding-bottom: 18px;
   }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .brand svg { width: 26px; height: 26px; }
-  .brand b { letter-spacing: 0.02em; font-size: 15px; }
-  .brand small { color: #5D7184; font-size: 11px; display: block; }
-  .bar .chipset { display: flex; gap: 8px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand svg { width: 24px; height: 24px; display: block; }
+  .brand b { font-size: 15px; letter-spacing: 0.01em; display: block; }
+  .brand small { color: #6E6E6E; font-size: 11.5px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
   .chip {
-    border: 1px solid #233444; background: #101A24; color: #9FB0C1;
-    border-radius: 999px; padding: 5px 12px; font-size: 12px; font-family: ui-monospace, Menlo, monospace;
+    border: 1px solid #2B2B2B; background: #111; color: #A6A6A6;
+    border-radius: 999px; padding: 4px 11px; font-size: 11.5px;
+    font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums;
   }
-  .chip b { color: #4ADE80; font-weight: 600; }
-  h1 { font-size: clamp(28px, 4.6vw, 42px); letter-spacing: -0.02em; line-height: 1.12; max-width: 21ch; }
-  h1 .accent { color: #38C7B5; }
-  .kicker { color: #38C7B5; font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; margin-bottom: 14px; }
-  .sub { color: #9FB0C1; font-size: 16px; max-width: 62ch; margin-top: 14px; }
-  .cta { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+  .chip b { color: #3ECF6A; font-weight: 600; }
+  main { padding: 72px 0 56px; }
+  .kicker {
+    color: #A6A6A6; font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; font-weight: 600; margin-bottom: 18px;
+  }
+  h1 {
+    font-size: clamp(30px, 5.2vw, 52px); font-weight: 600;
+    letter-spacing: -0.025em; line-height: 1.08; max-width: 18ch;
+  }
+  h1 b { font-weight: 600; border-bottom: 1px solid #F5F5F5; }
+  .sub { color: #9C9C9C; font-size: 16px; max-width: 58ch; margin-top: 18px; }
+  .sub .mono { color: #6E6E6E; letter-spacing: 0.06em; }
+  .cta { margin-top: 34px; }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    border-radius: 6px; padding: 11px 18px; font-size: 14px; font-weight: 600;
-    font-family: ui-monospace, Menlo, monospace;
-    border: 1px solid #2E4155; background: #101A24; color: #E8EEF4; cursor: pointer;
-    transition: border-color 0.14s ease, background 0.14s ease;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: #F5F5F5; color: #0A0A0A; font-weight: 600;
+    font-family: ui-monospace, Menlo, monospace; font-size: 13.5px;
+    padding: 13px 22px; border-radius: 6px; text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease;
   }
-  .btn:hover { border-color: #38C7B5; }
-  .btn.primary { background: #38C7B5; border-color: #38C7B5; color: #06120F; }
-  .btn.primary:hover { background: #4AD6C4; }
-  .grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 44px; }
-  .card {
-    background: #101A24; border: 1px solid #233444; border-radius: 10px; padding: 20px;
-    display: flex; flex-direction: column; gap: 6px;
-    transition: border-color 0.14s ease;
+  .btn:hover { background: #CFCFCF; }
+  .btn .arr { color: inherit; }
+  .metrics {
+    display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 1px; background: #242424; border: 1px solid #242424;
+    border-radius: 10px; overflow: hidden; margin-top: 64px;
   }
-  .card:hover { border-color: #2E4155; }
-  .card .t { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .card .t .mono { color: #38C7B5; font-size: 12.5px; }
-  .card .d { color: #6E8296; font-size: 12.5px; font-family: ui-monospace, Menlo, monospace; }
-  .card .p { color: #9FB0C1; font-size: 13.5px; }
-  .four { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1px; background: #233444; border: 1px solid #233444; border-radius: 10px; overflow: hidden; margin-top: 44px; }
-  .kpi { background: #101A24; padding: 18px; }
-  .kpi .l { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5D7184; font-weight: 600; }
-  .kpi .v { font-size: 22px; margin-top: 6px; color: #E8EEF4; font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
-  .kpi .s { font-size: 12px; color: #6E8296; margin-top: 4px; }
-  h2 { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #9FB0C1; margin: 48px 0 14px; font-weight: 600; }
-  pre {
-    background: #0D141C; border: 1px solid #233444; border-radius: 10px; padding: 18px 20px;
-    overflow-x: auto; font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #9FB0C1; line-height: 1.7;
+  .kpi { background: #111; padding: 20px; }
+  .kpi .l {
+    font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #6E6E6E; font-weight: 600;
   }
-  pre .c { color: #5D7184; }
-  footer { margin-top: 56px; border-top: 1px solid #1B2735; padding-top: 18px; color: #5D7184; font-size: 12.5px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  @media (max-width: 720px) { .grid, .four { grid-template-columns: 1fr; } .cta .btn { width: 100%; justify-content: center; } header.bar { flex-direction: column; align-items: flex-start; } }
+  .kpi .v { font-size: 24px; margin-top: 8px; font-weight: 600; letter-spacing: -0.01em; }
+  .kpi .s { font-size: 12px; color: #6E6E6E; margin-top: 5px; }
+  .kpi .s .dot { color: #3ECF6A; }
+  footer { border-top: 1px solid #1C1C1C; padding-top: 18px; color: #6E6E6E; font-size: 12.5px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: #9C9C9C; text-decoration: none; border-bottom: 1px solid #333; }
+  @media (max-width: 760px) {
+    header.bar { flex-direction: column; align-items: flex-start; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .btn { width: 100%; justify-content: center; }
+    main { padding: 52px 0 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -88,71 +94,40 @@
     <header class="bar">
       <div class="brand">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2.4 L20.6 7.2 V16.8 L12 21.6 L3.4 16.8 V7.2 Z" fill="none" stroke="#38C7B5" stroke-width="1.6" stroke-linejoin="round"/>
-          <path d="M12 6.8 c -3.1 3.6 -4.6 6.1 -4.6 8.1 a 4.6 4.6 0 0 0 9.2 0 c 0 -2 -1.5 -4.5 -4.6 -8.1 Z" fill="#38C7B5" opacity="0.85"/>
+          <path d="M12 2.4 L20.6 7.2 V16.8 L12 21.6 L3.4 16.8 V7.2 Z" fill="none" stroke="#F5F5F5" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12 6.8 c -3.1 3.6 -4.6 6.1 -4.6 8.1 a 4.6 4.6 0 0 0 9.2 0 c 0 -2 -1.5 -4.5 -4.6 -8.1 Z" fill="#3ECF6A"/>
         </svg>
         <div><b>ThermaSight</b><small>chiller intelligence · console</small></div>
       </div>
-      <div class="chipset">
-        <span class="chip">verif. demo <b>5/5</b></span>
+      <div class="chips">
+        <span class="chip">demo <b>5/5</b></span>
         <span class="chip">contract <b>8/8</b></span>
         <span class="chip">edge cases <b>17/17</b></span>
         <span class="chip">runtime ≈ <b>5.5 s</b></span>
       </div>
     </header>
 
-    <p class="kicker">YUKTHI 2026 · Intelligent Energy &amp; Equipment Monitoring</p>
-    <h1>See what your <span class="accent">chillers</span> are really doing.</h1>
-    <p class="sub">Unsupervised ML learns each unit&rsquo;s normal behaviour from its own history, then flags the
-      deviations that matter — with the evidence, the severity, and the next step.
-      <span class="mono" style="color:#9FB0C1">DETECT · UNDERSTAND · ASSESS · ACT</span></p>
-    <div class="cta">
-      <a class="btn primary" href="https://thermasight.higgsfield.app">Open live console ↗</a>
-      <a class="btn" href="ui-preview/">UI preview</a>
-      <a class="btn" href="https://github.com/AbhijithAA5/thermasight">Source</a>
-      <a class="btn" href="https://github.com/AbhijithAA5/thermasight/releases/download/v1.0.0/thermasight-2026-09-18.zip">Download zip</a>
-    </div>
+    <main>
+      <p class="kicker">YUKTHI 2026 · Intelligent Energy &amp; Equipment Monitoring</p>
+      <h1>See what your chillers are <b>really doing</b>.</h1>
+      <p class="sub">Unsupervised ML learns each unit&rsquo;s normal behaviour from its own history, then flags the
+        deviations that matter &mdash; with the evidence, the severity, and the next step.
+        <span class="mono">DETECT · UNDERSTAND · ASSESS · ACT</span></p>
+      <div class="cta">
+        <a class="btn" href="https://thermasight.higgsfield.app">Open live console <span class="arr">↗</span></a>
+      </div>
 
-    <div class="four">
-      <div class="kpi"><div class="l">Fleet energy</div><div class="v">3.26 GWh</div><div class="s">10 months · 3 units</div></div>
-      <div class="kpi"><div class="l">Anomalies</div><div class="v">173</div><div class="s">6 action · 51 alert · 116 watch</div></div>
-      <div class="kpi"><div class="l">Fleet health</div><div class="v">94 / 100</div><div class="s">learned from recent behaviour</div></div>
-      <div class="kpi"><div class="l">Observations</div><div class="v">25,003</div><div class="s">30-min cadence · 0 duplicates</div></div>
-    </div>
-
-    <h2>Run it anywhere</h2>
-    <pre><span class="c"># any PC, Python 3.10+ — from this repo or the release zip</span>
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python run.py            <span class="c"># → http://localhost:8000</span></pre>
-
-    <h2>Endpoints &amp; assets</h2>
-    <div class="grid">
-      <a class="card" href="https://github.com/AbhijithAA5/thermasight">
-        <div class="t">Repository <span class="mono">≡</span></div>
-        <div class="d">github.com/AbhijithAA5/thermasight</div>
-        <div class="p">FastAPI + numpy pipeline, vanilla console UI, bundled dataset, 17-case edge battery, CI.</div>
-      </a>
-      <a class="card" href="https://github.com/AbhijithAA5/thermasight-web">
-        <div class="t">Hosted companion <span class="mono">≡</span></div>
-        <div class="d">github.com/AbhijithAA5/thermasight-web</div>
-        <div class="p">The client-side ML build (React + TanStack Start) that powers the live console.</div>
-      </a>
-      <a class="card" href="https://github.com/AbhijithAA5/thermasight/blob/main/README.md">
-        <div class="t">README + honest scope <span class="mono">≡</span></div>
-        <div class="d">run guide · guideline matrix · verification</div>
-        <div class="p">How the solution meets every challenge guideline, with the sources.</div>
-      </a>
-      <a class="card" href="ui-preview/">
-        <div class="t">UI preview <span class="mono">≡</span></div>
-        <div class="d">static shell of the console</div>
-        <div class="p">The real index.html + design layer rendered statically (hero, tabs, overlay).</div>
-      </a>
-    </div>
+      <div class="metrics">
+        <div class="kpi"><div class="l">Fleet energy</div><div class="v mono">3.26 GWh</div><div class="s">10 months · 3 units</div></div>
+        <div class="kpi"><div class="l">Anomalies</div><div class="v mono">173</div><div class="s"><span class="dot">●</span> 6 action · 51 alert · 116 watch</div></div>
+        <div class="kpi"><div class="l">Fleet health</div><div class="v mono">94 / 100</div><div class="s">learned from recent behaviour</div></div>
+        <div class="kpi"><div class="l">Observations</div><div class="v mono">25,003</div><div class="s">30-min cadence · 0 duplicates</div></div>
+      </div>
+    </main>
 
     <footer>
       <span>ThermaSight · YUKTHI 2026</span>
-      <span class="mono">python backend · vanilla html · css · js — no generated media</span>
+      <span><a href="https://github.com/AbhijithAA5/thermasight">github.com/AbhijithAA5/thermasight</a> · python backend · vanilla html · css · js</span>
     </footer>
   </div>
 </body>
