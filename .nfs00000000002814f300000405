@@ -1,0 +1,14 @@
+INFO:     Started server process [1216]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8123 (Press CTRL+C to quit)
+INFO:     127.0.0.1:28960 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63987 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36231 - "POST /api/analyse HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65392 - "GET /api/result/5ea97b2b4853 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:18046 - "GET /api/series/5ea97b2b4853/CHILLER-01?variable=Chiller%20Energy%20Consumption HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61000 - "POST /api/analyse HTTP/1.1" 200 OK
+INFO:     127.0.0.1:24932 - "POST /api/analyse HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55635 - "POST /api/analyse HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64419 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40872 - "GET /api/result/nope HTTP/1.1" 404 Not Found
