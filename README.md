@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/AbhijithAA5/thermasight/actions/workflows/ci.yml/badge.svg)](https://github.com/AbhijithAA5/thermasight/actions/workflows/ci.yml)
 
+> ### ▶ Live platform — hosted on GitHub Pages
+> **https://abhijithaa5.github.io/thermasight-web/**
+> Open the working console in your browser: upload a CSV (or use the bundled 25,003-row YUKTHI development dataset) — the whole ML pipeline runs client-side, nothing leaves the machine. No downloads, no sign-ins.
+
 Submission for **YUKTHI 2026** (National-Level Hackathon, *Intelligent Energy &
 Equipment Monitoring* track). Built and verified against the supplied
 development dataset and the official Data Specification.
