@@ -112,6 +112,14 @@ async function analyseReal() {
 async function runAnalyse(form) {
   if (state.analysing) return;
   state.analysing = true;
+  // a new analysis must never keep the previous dataset's results on screen
+  state.result = null;
+  state.resultId = null;
+  state.seriesCache = {};
+  state.equipmentId = null;
+  state.selectedEpisodeId = null;
+  state.timeRange = null;
+  renderHeaderStatus();
   showProgress(true, "");
   try {
     const meta = await apiJson("/api/analyse", { method: "POST", body: form });
@@ -147,10 +155,23 @@ function renderHeaderStatus() {
   const s = state.result;
   const h = $("#header-status");
   h.innerHTML = s
-    ? `<span class="ts-status-chip"><span class="ts-chip-dot ts-chip-dot-ok"></span>${s.quality.equipmentCount} ${s.quality.equipmentCount === 1 ? "unit" : "units"}</span>` +
+    ? `<button class="ts-link ts-home-link" id="btn-home">← home</button>` +
+      `<span class="ts-status-chip"><span class="ts-chip-dot ts-chip-dot-ok"></span>${s.quality.equipmentCount} ${s.quality.equipmentCount === 1 ? "unit" : "units"}</span>` +
       `<span class="ts-status-meta mono">${esc(s.quality.fileName)}</span>` +
       `<span class="ts-status-meta mono dim">${s.episodes.length} anomalies</span>`
     : `<span class="ts-status-meta mono dim">no dataset loaded</span>`;
+  const hb = $("#btn-home");
+  if (hb) {
+    hb.onclick = () => {
+      state.result = null;
+      state.resultId = null;
+      state.seriesCache = {};
+      state.selectedEpisodeId = null;
+      state.timeRange = null;
+      renderHeaderStatus();
+      setTab("overview");
+    };
+  }
   const count = $("#tab-anomaly-count");
   if (s && s.episodes.length) {
     count.textContent = s.episodes.length;
@@ -197,10 +218,9 @@ function renderHero() {
           </p>
           <div class="ts-hero-cta">
             <button class="ts-btn ts-btn-primary" id="btn-real">Analyse real YUKTHI dataset</button>
-            <button class="ts-btn ts-btn-ghost" id="btn-demo">Or try the demo</button>
             <button class="ts-btn ts-btn-ghost" id="btn-upload">Upload CSV</button>
           </div>
-          <p class="ts-hero-note">Run the full 25,003-row YUKTHI development dataset (3 chillers, 10 months), the built-in synthetic demo, or drop your own CSV into the Data tab.</p>
+          <p class="ts-hero-note">Run the full 25,003-row YUKTHI development dataset (3 chillers, 10 months), or drop your own CSV into the Data tab.</p>
         </div>
         <div class="ts-schematic-card">
           ${plantSvg()}
@@ -214,7 +234,6 @@ function renderHero() {
       </section>
     </main>`;
   $("#btn-real").addEventListener("click", analyseReal);
-  $("#btn-demo").addEventListener("click", analyseDemo);
   $("#btn-upload").addEventListener("click", () => setTab("data"));
 }
 
@@ -245,12 +264,14 @@ function renderFleet() {
   const stat = fleetStats(s);
   const healths = ids.map((eq) => s.equipment[eq].health).filter((h) => h != null);
   const avgHealth = healths.length ? Math.round(healths.reduce((a, b) => a + b, 0) / healths.length) : 0;
+  const healthClass = avgHealth >= 75 ? "ts-tx-ok" : avgHealth >= 55 ? "ts-tx-warn" : "ts-tx-danger";
+  const riskClass = stat.atRisk.length > 0 ? "ts-tx-danger" : "";
   const queue = [...s.episodes]
     .sort((a, b) => (SEV_CODE[b.severity] - SEV_CODE[a.severity]) || (b.peakScore - a.peakScore))
     .slice(0, 7);
 
-  const kpi = (label, value, sub, extra = "", count = null, fmt = null) =>
-    `<div class="ts-kpi"><span class="ts-kpi-label">${label}</span><span class="ts-kpi-value mono" data-count="${count ?? ""}" data-fmt="${fmt ?? ""}">${value}</span><span class="ts-kpi-sub ${extra}">${sub}</span></div>`;
+  const kpi = (label, value, sub, extra = "", count = null, fmt = null, cls = "") =>
+    `<div class="ts-kpi"><span class="ts-kpi-label">${label}</span><span class="ts-kpi-value mono ${cls}" data-count="${count ?? ""}" data-fmt="${fmt ?? ""}">${value}</span><span class="ts-kpi-sub ${extra}">${sub}</span></div>`;
 
   const cards = ids
     .map((eq) => {
@@ -263,6 +284,7 @@ function renderFleet() {
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="ts-unit-name mono">${esc(eq)}</h3>
+              <span class="ts-unit-dot" style="background:${rep.health == null ? "var(--ts-hair)" : rep.health >= 75 ? "var(--ts-ok)" : rep.health >= 55 ? "var(--ts-warn)" : "var(--ts-danger)"}"></span>
               ${worst ? sevChip(worst.severity) : sevChip("normal")}
             </div>
             <dl class="ts-unit-stats">
@@ -284,7 +306,7 @@ function renderFleet() {
   const queueRows = queue
     .map(
       (ep) => `
-      <li class="ts-entrance"><button class="ts-queue-row" data-episode-id="${ep.id}">
+      <li class="ts-entrance"><button class="ts-queue-row ts-queue-${ep.severity}" data-episode-id="${ep.id}">
         <div class="flex items-center gap-2"><span class="mono ts-queue-equip">${esc(ep.equipmentId)}</span>${sevChip(ep.severity)}</div>
         <div class="ts-queue-meta mono">${fmtTime(ep.startTime)} · score ${fmtSig(ep.peakScore, 2)}</div>
         <div class="ts-queue-pattern">${patternLabel(ep.patternTags[0] || "contextual_energy_spike")}</div>
@@ -298,8 +320,8 @@ function renderFleet() {
         ${kpi("Fleet energy", fmtEnergy(stat.energyTotalKwh), "across the observation period", "mono", stat.energyTotalKwh, "fmtEnergy")}
         ${kpi("Anomalies", s.episodes.length,
           `${stat.bySeverity.action ? `<span class="ts-kpi-chip ts-chip-action">${stat.bySeverity.action} action</span>` : ""}${stat.bySeverity.alert ? `<span class="ts-kpi-chip ts-chip-alert">${stat.bySeverity.alert} alert</span>` : ""}${stat.bySeverity.watch ? `<span class="ts-kpi-chip ts-chip-warn">${stat.bySeverity.watch} watch</span>` : ""}`, "", s.episodes.length)}
-        ${kpi("Units at risk", `${stat.atRisk.length}<span class="ts-kpi-denom">/${ids.length}</span>`, "health below 60", "mono", stat.atRisk.length)}
-        ${kpi("Fleet health", `${avgHealth}<span class="ts-kpi-denom">/100</span>`, "learned from recent behaviour", "mono", avgHealth)}
+        ${kpi("Units at risk", `${stat.atRisk.length}<span class="ts-kpi-denom">/${ids.length}</span>`, "health below 60", "mono", stat.atRisk.length, null, riskClass)}
+        ${kpi("Fleet health", `${avgHealth}<span class="ts-kpi-denom">/100</span>`, "learned from recent behaviour", "mono", avgHealth, null, healthClass)}
       </div>
       <div class="grid-fleet">
         <div>
@@ -397,6 +419,9 @@ function renderExplorer() {
 
   viewEl().innerHTML = `
     <main class="ts-container ts-page">
+      <div class="ts-explorer-back">
+        <button class="ts-link dim" data-back-overview>← overview</button>
+      </div>
       <div class="ts-explorer-controls">
         <div class="ts-pill-group" role="group" aria-label="Equipment">${pills}</div>
         <label class="ts-select-wrap">
@@ -436,6 +461,7 @@ function renderExplorer() {
       renderExplorer();
     })
   );
+  $$("[data-back-overview]").forEach((b) => b.addEventListener("click", () => setTab("overview")));
   $("#var-select").addEventListener("change", (e) => {
     state.variable = e.target.value;
     renderExplorer();

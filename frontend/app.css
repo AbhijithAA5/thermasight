@@ -34,7 +34,45 @@
 }
 
 /* the base stylesheet hardcodes one dark literal — pin the surface here */
-body, .ts-page-bg { background: var(--ts-bg); color: var(--ts-text); }
+body, .ts-page-bg {
+  background-color: var(--ts-bg);
+  color: var(--ts-text);
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px, 56px 56px;
+}
+
+/* back affordances + indicator accents */
+.ts-home-link {
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ts-explorer-back {
+  display: flex;
+  margin-bottom: 12px;
+}
+.ts-unit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+.ts-queue-row {
+  border-left: 2px solid transparent;
+}
+.ts-queue-watch {
+  border-left-color: var(--ts-warn);
+}
+.ts-queue-alert {
+  border-left-color: var(--ts-alert);
+}
+.ts-queue-action {
+  border-left-color: var(--ts-danger);
+}
 
 /* ---- typography: every numeral is tabular ---- */
 .mono,
