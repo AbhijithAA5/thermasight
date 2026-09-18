@@ -96,6 +96,25 @@ python scripts/smoke_real.py   # real dataset: contract + output coherence, all 
 python scripts/explore_dataset.py data/yukthi_development.csv --out /tmp/report.json
 ```
 
+## How the solution meets the challenge guidelines
+
+| Guideline (Problem Statement §4, §5, §10) | How ThermaSight does it | Verified by |
+|---|---|---|
+| Contextual anomaly detection — a value is only unusual *given the operating conditions* | Residual MLP predicts expected energy from load, water temperatures, ambient, dynamics; deviations are scored against that expectation, not fixed thresholds | `docs/PROJECT_REPORT.md` §3–§4 |
+| Normal behaviour varies over time | Hour-of-day / day-of-week / day-of-year features, trailing 24h rolling baselines, per-unit learned models | `backend/pipeline/features.py` |
+| Equipment operates under different loads and conditions | Everything is conditioned on the unit's own context; each unit gets its own models and threshold | `backend/pipeline/engine.py` |
+| Multiple variables may need to be considered together | Isolation Forest over all usable measurements + fused (0.25/0.75) with the contextual residual | `backend/pipeline/scoring.py` |
+| **Isolated deviations may not necessarily indicate an issue** | Persistence logic: a flagged point needs a ≥2-interval run (or a top-1% extreme) to become an episode; isolated blips stay low, sustained runs escalate | `scripts/edge_cases.py` |
+| Persistent, repeated, or contextual deviations require more attention | Run boost, joins within 12 intervals, relative severity (worst ~10% action / 30% alert / rest watch), health from recent exposure + 90-day trend | `backend/pipeline/scoring.py` |
+| Missing data may occur | Blank cells → interpolated short gaps / carried forward long gaps; entirely absent columns degrade to all-missing, are reported, and are excluded from modelling; per-unit insufficiency guard instead of crashes | `scripts/edge_cases.py` — 17/17 PASS |
+| No hard-coded observations or dataset-specific assumptions | Contract-driven parser (columns by name, identity by equipment_id+timestamp), no row-count or timestamp literals anywhere in the pipeline | `backend/pipeline/parser.py` |
+| Severity / risk / prioritisation of conditions | Watch / Alert / Action tiers relative to the unit's own flagged tail, fleet priority queue, `at-risk` unit list | Fleet view + `docs/DATA_REPORT.md` |
+| Evidence-based recommendations | Each episode: contributing measurements vs 12h baseline (σ), pattern tags, plain-language narrative, evidence table, recommended investigations | `backend/pipeline/interpretation.py` |
+| Functional application, meaningful ML, end-to-end workflow | FastAPI + numpy pipeline behind a vanilla JS console UI: Data → Quality → Features → ML → Fusion → Episodes → Interpretation → Recommendations | Live: `thermasight.higgsfield.app` |
+| Reusable pipeline for any conforming dataset | One code path for the bundled development set, the synthetic demo, or any uploaded CSV | `scripts/smoke_real.py`, `scripts/edge_cases.py` |
+
+**Bundled data integrity:** the supplied development dataset is bundled untouched — the copies in `data/` and in the hosted app are byte-identical to the attached CSV (sha256 `16c90087…`, 25,003 rows + header), and `scripts/smoke_real.py` verifies its contract numbers against the Data Specification on every run.
+
 ## Honest scope
 
 - No fault labels exist in the development set, so detection is unsupervised
