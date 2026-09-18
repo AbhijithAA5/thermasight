@@ -1,0 +1,224 @@
+{
+  "source": "attachments/chiller_dataset.csv",
+  "rows": 25003,
+  "columns": [
+    "timestamp",
+    "equipment_id",
+    "Chilled Water Rate (L/sec)",
+    "Cooling Water Temperature (C)",
+    "Building Load (RT)",
+    "Chiller Energy Consumption (kWh)",
+    "Outside Temperature (F)",
+    "Dew Point (F)",
+    "Humidity (%)",
+    "Wind Speed (mph)",
+    "Pressure (in)"
+  ],
+  "field_count": 11,
+  "rows_match_spec": true,
+  "unparseable_timestamps": 0,
+  "nominal_interval_minutes": 30,
+  "equipment_ids": [
+    "CHILLER-01",
+    "CHILLER-02",
+    "CHILLER-03"
+  ],
+  "equipment_count": 3,
+  "duplicate_pairs": 0,
+  "duplicates_match_spec": true,
+  "per_unit": {
+    "CHILLER-01": {
+      "rows": 8333,
+      "time_start": "2019-08-18 00:00:00",
+      "time_end": "2020-06-01 13:00:00",
+      "span_days": 288.5416666666667,
+      "median_interval_min": 30.0,
+      "gap_over_60min_count": 16,
+      "max_gap_minutes": 105990.0
+    },
+    "CHILLER-02": {
+      "rows": 8340,
+      "time_start": "2019-09-28 17:30:00",
+      "time_end": "2020-06-01 13:00:00",
+      "span_days": 246.8125,
+      "median_interval_min": 30.0,
+      "gap_over_60min_count": 17,
+      "max_gap_minutes": 24840.0
+    },
+    "CHILLER-03": {
+      "rows": 8330,
+      "time_start": "2019-08-18 00:00:00",
+      "time_end": "2020-06-01 13:00:00",
+      "span_days": 288.5416666666667,
+      "median_interval_min": 30.0,
+      "gap_over_60min_count": 18,
+      "max_gap_minutes": 55860.0
+    }
+  },
+  "missing_values": {
+    "Chilled Water Rate (L/sec)": {
+      "count": 40,
+      "pct": 0.15998080230372355
+    },
+    "Cooling Water Temperature (C)": {
+      "count": 5,
+      "pct": 0.019997600287965444
+    },
+    "Building Load (RT)": {
+      "count": 19,
+      "pct": 0.07599088109426869
+    },
+    "Chiller Energy Consumption (kWh)": {
+      "count": 9,
+      "pct": 0.0359956805183378
+    },
+    "Humidity (%)": {
+      "count": 20,
+      "pct": 0.07999040115186178
+    },
+    "Wind Speed (mph)": {
+      "count": 23,
+      "pct": 0.09198896132464104
+    },
+    "Pressure (in)": {
+      "count": 12,
+      "pct": 0.04799424069111707
+    }
+  },
+  "missing_match_spec": true,
+  "missing_spec": {
+    "Chilled Water Rate (L/sec)": 40,
+    "Cooling Water Temperature (C)": 5,
+    "Building Load (RT)": 19,
+    "Chiller Energy Consumption (kWh)": 9,
+    "Humidity (%)": 20,
+    "Wind Speed (mph)": 23,
+    "Pressure (in)": 12
+  },
+  "numeric_summaries": {
+    "Chilled Water Rate (L/sec)": {
+      "min": 60.0,
+      "p25": 86.7,
+      "median": 93.7,
+      "mean": 96.5510074910868,
+      "p75": 105.3,
+      "max": 170.0,
+      "std": 13.113906595545163
+    },
+    "Cooling Water Temperature (C)": {
+      "min": 25.8,
+      "p25": 30.9,
+      "median": 31.7,
+      "mean": 31.762192975438033,
+      "p75": 32.7,
+      "max": 36.7,
+      "std": 1.2379779699081632
+    },
+    "Building Load (RT)": {
+      "min": 55.1,
+      "p25": 439.1,
+      "median": 488.9,
+      "mean": 514.9075928594301,
+      "p75": 584.95,
+      "max": 1088.4,
+      "std": 96.04520067538445
+    },
+    "Chiller Energy Consumption (kWh)": {
+      "min": 18.0,
+      "p25": 108.6,
+      "median": 121.8,
+      "mean": 130.73009122189325,
+      "p75": 142.6,
+      "max": 350.0,
+      "std": 31.071243408373995
+    },
+    "Outside Temperature (F)": {
+      "min": 73.0,
+      "p25": 81.0,
+      "median": 82.0,
+      "mean": 83.3914450265968,
+      "p75": 86.0,
+      "max": 93.0,
+      "std": 3.838665233591686
+    },
+    "Dew Point (F)": {
+      "min": 59.0,
+      "p25": 73.0,
+      "median": 75.0,
+      "mean": 75.20061592608887,
+      "p75": 77.0,
+      "max": 81.0,
+      "std": 1.9792107110124586
+    },
+    "Humidity (%)": {
+      "min": 31.3,
+      "p25": 70.0,
+      "median": 79.0,
+      "mean": 77.56942320778128,
+      "p75": 84.0,
+      "max": 100.0,
+      "std": 10.957880351492769
+    },
+    "Wind Speed (mph)": {
+      "min": 0.0,
+      "p25": 3.0,
+      "median": 6.0,
+      "mean": 6.087510008006405,
+      "p75": 8.0,
+      "max": 21.0,
+      "std": 3.6545863741626823
+    },
+    "Pressure (in)": {
+      "min": 29.62,
+      "p25": 29.77,
+      "median": 29.8,
+      "mean": 29.802110759873557,
+      "p75": 29.83,
+      "max": 29.95,
+      "std": 0.05102210892256769
+    }
+  },
+  "unit_behaviour": {
+    "CHILLER-01": {
+      "load_mean_rt": 512.8291251650065,
+      "energy_mean_kwh": 127.83993759750389,
+      "energy_total_kwh": 1065290.2,
+      "corr_load_energy": 0.8649469087029913
+    },
+    "CHILLER-02": {
+      "load_mean_rt": 510.3048859543817,
+      "energy_mean_kwh": 131.82413669064746,
+      "energy_total_kwh": 1099413.2999999998,
+      "corr_load_energy": 0.8216649727674497
+    },
+    "CHILLER-03": {
+      "load_mean_rt": 521.5967431799063,
+      "energy_mean_kwh": 132.52786924648478,
+      "energy_total_kwh": 1102764.4,
+      "corr_load_energy": 0.8875363357915881
+    }
+  },
+  "corr_load_energy_fleet": 0.8572677612933586,
+  "expected": {
+    "rows": 25003,
+    "fields": 11,
+    "units": 3,
+    "duplicates": 0,
+    "missing": {
+      "Chilled Water Rate (L/sec)": 40,
+      "Cooling Water Temperature (C)": 5,
+      "Building Load (RT)": 19,
+      "Chiller Energy Consumption (kWh)": 9,
+      "Humidity (%)": 20,
+      "Wind Speed (mph)": 23,
+      "Pressure (in)": 12
+    },
+    "no_missing": [
+      "timestamp",
+      "equipment_id",
+      "Outside Temperature (F)",
+      "Dew Point (F)"
+    ],
+    "nominal_interval_min": 30
+  }
+}

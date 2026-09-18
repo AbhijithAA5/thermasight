@@ -104,6 +104,11 @@ async function analyseFile(file) {
   fd.append("file", file);
   await runAnalyse(fd);
 }
+async function analyseReal() {
+  const fd = new FormData();
+  fd.append("dataset", "real");
+  await runAnalyse(fd);
+}
 async function runAnalyse(form) {
   if (state.analysing) return;
   state.analysing = true;
@@ -191,10 +196,11 @@ function renderHero() {
             that matter, with the evidence and the next step.
           </p>
           <div class="ts-hero-cta">
-            <button class="ts-btn ts-btn-primary" id="btn-demo">Analyse demo dataset</button>
+            <button class="ts-btn ts-btn-primary" id="btn-real">Analyse real YUKTHI dataset</button>
+            <button class="ts-btn ts-btn-ghost" id="btn-demo">Or try the demo</button>
             <button class="ts-btn ts-btn-ghost" id="btn-upload">Upload CSV</button>
           </div>
-          <p class="ts-hero-note">Drop the YUKTHI participant CSV into the Data tab, or start with the built-in synthetic demo.</p>
+          <p class="ts-hero-note">Run the full 25,003-row YUKTHI development dataset (3 chillers, 10 months), the built-in synthetic demo, or drop your own CSV into the Data tab.</p>
         </div>
         <div class="ts-schematic-card">
           ${plantSvg()}
@@ -207,6 +213,7 @@ function renderHero() {
         ${howCard("Act", "Each anomaly carries its contributing measurements, a plain-language narrative and evidence-based recommendations for investigation.")}
       </section>
     </main>`;
+  $("#btn-real").addEventListener("click", analyseReal);
   $("#btn-demo").addEventListener("click", analyseDemo);
   $("#btn-upload").addEventListener("click", () => setTab("data"));
 }
@@ -585,6 +592,7 @@ function renderData() {
       </div>
       <div class="ts-dropzone-alt">
         <span class="ts-dropzone-body">No file handy?</span>
+        <button class="ts-link" id="btn-real-alt">Analyse the bundled YUKTHI development dataset (25,003 rows)</button>
         <button class="ts-link" id="btn-demo-alt">Analyse the built-in demo dataset</button>
       </div>
     </section>`;
@@ -633,6 +641,7 @@ function renderData() {
   const dropzone = $("#dropzone");
   const input = $("#file-input");
   $("#btn-browse").addEventListener("click", () => input.click());
+  $("#btn-real-alt").addEventListener("click", analyseReal);
   $("#btn-demo-alt").addEventListener("click", analyseDemo);
   input.addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];

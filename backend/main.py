@@ -6,6 +6,7 @@ frontend from the same process.
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 import uuid
@@ -53,13 +54,25 @@ def health() -> dict:
 @app.post("/api/analyse")
 async def analyse(
     demo: str = Form(""),
+    dataset: str = Form(""),
     file: UploadFile | None = File(None),
 ) -> JSONResponse:
-    """Run the full pipeline. Either upload a CSV conforming to the data
-    contract, or pass demo=1 to analyse the built-in synthetic dataset."""
-    if demo == "1":
+    """Run the full pipeline. Upload a CSV conforming to the data contract,
+    pass demo=1 / dataset=demo for the built-in synthetic dataset, or
+    dataset=real for the bundled YUKTHI 2026 development dataset."""
+    if demo == "1" or dataset == "demo":
         csv_text = generate_demo_csv()
         file_name = "yukthi-demo-chillers.csv"
+        source = "demo"
+    elif dataset == "real":
+        real_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data", "yukthi_development.csv",
+        )
+        with open(real_path, "r", encoding="utf-8") as fh:
+            csv_text = fh.read()
+        file_name = "yukthi-development-dataset.csv"
+        source = "real"
     elif file is not None:
         raw = await file.read()
         try:
@@ -67,8 +80,9 @@ async def analyse(
         except UnicodeDecodeError:
             raise HTTPException(status_code=400, detail="The file must be UTF-8 encoded text (CSV).")
         file_name = file.filename or "uploaded.csv"
+        source = "upload"
     else:
-        raise HTTPException(status_code=400, detail="Provide a CSV file, or pass demo=1.")
+        raise HTTPException(status_code=400, detail="Provide a CSV file, or pass demo=1 / dataset=real.")
 
     result_id = uuid.uuid4().hex[:12]
     try:
@@ -89,6 +103,7 @@ async def analyse(
 
     return _json({
         "id": result_id,
+        "source": source,
         "quality": result["quality"],
         "episodeCount": len(result["episodes"]),
         "model": result["model"],
