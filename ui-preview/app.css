@@ -218,18 +218,41 @@ a:focus:not(:focus-visible),
   .ts-header-inner { flex-wrap: wrap; row-gap: 8px; }
   .ts-kpi-band { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 900px) {
+  /* console tabs become a scrollable instrument strip — never wrap/cut */
+  .ts-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-snap-type: x proximity;
+    order: 3;
+    width: 100%;
+    padding-bottom: 2px;
+  }
+  .ts-tabs::-webkit-scrollbar { display: none; }
+  .ts-tab { flex: 0 0 auto; scroll-snap-align: start; }
+  .ts-hero-title {
+    font-size: clamp(26px, 7.6vw, 38px) !important;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  .ts-hero-cta .ts-btn { width: 100%; justify-content: center; }
+}
 @media (max-width: 768px) {
   .ts-kpi-value { font-size: 20px; }
   .ts-unit-grid { grid-template-columns: 1fr; }
   .grid-fleet { grid-template-columns: 1fr; }
   .ts-drawer { width: 100vw; }
-  .ts-hero-cta { flex-direction: column; align-items: stretch; }
-  .ts-hero-cta .ts-btn { width: 100%; }
+  .ts-hero-cta { flex-direction: column; align-items: stretch; gap: 12px; }
+  .ts-how { padding-inline: 2px; }
+  .ts-hero { padding-inline: 18px; }
 }
 @media (max-width: 480px) {
   .ts-header-brand-sub { display: none; }
   .ts-footer-mid { display: none; }
   .ts-kpi { padding: 12px 14px; }
+  .ts-q-grid > div { grid-template-columns: 1fr; }
 }
 
 /* ---- reduced motion: the console goes still, not dead ---- */
