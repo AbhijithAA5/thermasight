@@ -208,8 +208,7 @@ function renderView() {
 function renderHero() {
   viewEl().innerHTML = `
     <main class="ts-hero ts-container">
-      <div class="grid-hero">
-        <div class="max-w-hero">
+      <div class="max-w-hero">
           <p class="ts-kicker">YUKTHI 2026 · intelligent energy and equipment monitoring</p>
           <h1 class="ts-hero-title">See what your chillers are really doing.</h1>
           <p class="ts-hero-sub">
@@ -222,11 +221,6 @@ function renderHero() {
           </div>
           <p class="ts-hero-note">Run the full 25,003-row YUKTHI development dataset (3 chillers, 10 months), or drop your own CSV into the Data tab.</p>
         </div>
-        <div class="ts-schematic-card">
-          ${plantSvg()}
-          <p class="ts-schematic-caption">The pipeline analyses every unit independently: three chillers, three learned baselines.</p>
-        </div>
-      </div>
       <section class="ts-how">
         ${howCard("Learn", "Two models per unit: an isolation forest over all measurements, and a network that predicts expected energy from load, water temperatures and ambient conditions.")}
         ${howCard("Detect", "Scores are fused with persistence logic: an isolated blip is noted, a sustained deviation is escalated.")}
