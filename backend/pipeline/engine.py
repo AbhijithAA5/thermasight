@@ -12,14 +12,38 @@ import numpy as np
 from .features import WARMUP, build_features, impute_series, median
 from .interpretation import analyze_contributors, build_narrative, detect_patterns, time_label
 from .models import IsolationForest, MLPRegressor, quantile_sorted
-from .parser import build_dataset
+from .parser import DatasetError, build_dataset
 from .recommendations import recommendations_for_patterns
 from .scoring import (compute_health, degradation_trend, episode_shell, equipment_stats,
                       score_series)
-from .types import SEVERITY_RANK, NUMERIC_COLS, Series
+from .types import SEVERITY_RANK, NUMERIC_COLS, TARGET_COL, Series
 
 SEVERITY_CODE = {"normal": 0, "watch": 1, "alert": 2, "action": 3}
 CODE_SEVERITY = {0: "normal", 1: "watch", 2: "alert", 3: "action"}
+
+MIN_DATA = WARMUP + 24  # trailing baseline window (96) + a minimum training set
+
+
+def _insufficient_report(s: Series, reason: str) -> dict:
+    n = len(s.times)
+    stats = equipment_stats(s)
+    return {
+        "equipmentId": s.equipment_id,
+        "insufficientData": True,
+        "insufficientReason": reason,
+        "score": [0.0] * n,
+        "severityCodes": [0] * n,
+        "threshold": 0.0,
+        "health": None,
+        "degradationTrend": 0.0,
+        "episodes": [],
+        "energyTotalKwh": stats["energyTotalKwh"],
+        "energyMeanKwh": stats["energyMeanKwh"],
+        "count": n,
+        "times": list(s.times),
+        "values": {c: [None] * n for c in NUMERIC_COLS},
+        "modelFeatures": {"if": 0, "mlp": 0},
+    }
 
 
 def median_interval(times: list[int]) -> int:
@@ -30,9 +54,16 @@ def median_interval(times: list[int]) -> int:
 
 
 def _run_equipment(s: Series, nominal_minutes: int) -> dict:
+    n = len(s.times)
+    if n < MIN_DATA:
+        return _insufficient_report(
+            s, f"only {n} observations (minimum {MIN_DATA} needed for the trailing "
+            "baseline and model training)"
+        )
     imputed = impute_series(s, nominal_minutes)
     feats = build_features(imputed)
-    n = len(s.times)
+    if TARGET_COL not in feats["usableCols"]:
+        return _insufficient_report(s, "no usable 'Chiller Energy Consumption' values in the file")
     train_from = min(WARMUP, n)
 
     forest = IsolationForest()
@@ -105,6 +136,7 @@ def _run_equipment(s: Series, nominal_minutes: int) -> dict:
         values_out[c] = [None if not math.isfinite(v) else round(v, 3) for v in imputed.data[c]]
     return {
         "equipmentId": s.equipment_id,
+        "insufficientData": False,
         "score": [round(float(x), 4) for x in scored["score"]],
         "severityCodes": severity_codes,
         "threshold": round(float(scored["threshold"]), 4),
@@ -116,6 +148,7 @@ def _run_equipment(s: Series, nominal_minutes: int) -> dict:
         "count": n,
         "times": s.times,
         "values": values_out,
+        "modelFeatures": {"if": len(feats["ifNames"]), "mlp": len(feats["mlpNames"])},
     }
 
 
@@ -129,17 +162,30 @@ def run_pipeline(csv_text: str, file_name: str) -> dict:
     nominal_minutes = max(1, round(nominal_ms / 60_000))
 
     equipment: dict[str, dict] = {}
+    analyzed_ids: list[str] = []
     for eq in equipment_ids:
         equipment[eq] = _run_equipment(series[eq], nominal_minutes)
+        if not equipment[eq].get("insufficientData"):
+            analyzed_ids.append(eq)
+
+    if not analyzed_ids:
+        reasons = "; ".join(f"{eq} -> {equipment[eq].get('insufficientReason', 'unknown')}" for eq in equipment_ids)
+        raise DatasetError(
+            "No equipment unit could be analysed: " + reasons
+            + ". Upload a CSV with at least " + str(MIN_DATA)
+            + " observations per unit (including a usable 'Chiller Energy Consumption' column)."
+        )
 
     episodes: list[dict] = []
-    for eq in equipment_ids:
+    for eq in analyzed_ids:
         episodes.extend(equipment[eq]["episodes"])
     episodes.sort(key=lambda e: (SEVERITY_RANK[e["severity"]], e["peakScore"]), reverse=True)
 
+    if_features = max(equipment[eq]["modelFeatures"]["if"] for eq in analyzed_ids)
+    mlp_features = max(equipment[eq]["modelFeatures"]["mlp"] for eq in analyzed_ids)
     model = {
-        "isolationForest": {"trees": 80, "maxSamples": 256, "features": 18},
-        "residualModel": {"hiddenUnits": 24, "epochs": 150, "features": 16},
+        "isolationForest": {"trees": 80, "maxSamples": 256, "features": if_features},
+        "residualModel": {"hiddenUnits": 24, "epochs": 150, "features": mlp_features},
         "fusion": {"ifWeight": 0.25, "residualWeight": 0.75,
                    "thresholdQuantile": 0.975, "joinWindow": 12},
         "runtimeMs": round((time.time() - t0) * 1000),

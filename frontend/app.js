@@ -243,7 +243,8 @@ function renderFleet() {
   const q = s.quality;
   const ids = q.equipmentIds;
   const stat = fleetStats(s);
-  const avgHealth = Math.round(ids.reduce((a, eq) => a + s.equipment[eq].health, 0) / ids.length);
+  const healths = ids.map((eq) => s.equipment[eq].health).filter((h) => h != null);
+  const avgHealth = healths.length ? Math.round(healths.reduce((a, b) => a + b, 0) / healths.length) : 0;
   const queue = [...s.episodes]
     .sort((a, b) => (SEV_CODE[b.severity] - SEV_CODE[a.severity]) || (b.peakScore - a.peakScore))
     .slice(0, 7);
@@ -319,7 +320,7 @@ function renderFleet() {
     Gauge($(`[data-gauge="${eq}"]`), s.equipment[eq].health);
     fetchSeries(eq).then((p) => {
       const holder = $(`[data-spark="${eq}"]`);
-      if (holder) Sparkline(holder, p, { color: s.equipment[eq].health >= 60 ? "var(--ts-accent)" : "var(--ts-warn)" });
+      if (holder) Sparkline(holder, p, { color: s.equipment[eq].health != null && s.equipment[eq].health >= 60 ? "var(--ts-accent)" : "var(--ts-warn)" });
     });
   });
 
@@ -336,7 +337,7 @@ function fleetStats(s) {
   for (const eq of Object.keys(s.equipment)) {
     const rep = s.equipment[eq];
     for (const ep of rep.episodes) bySeverity[ep.severity]++;
-    if (rep.health < 60) atRisk.push(eq);
+    if (rep.health != null && rep.health < 60) atRisk.push(eq);
   }
   return { energyTotalKwh: energy, bySeverity, atRisk };
 }
@@ -850,6 +851,10 @@ function Sparkline(holder, payload, opts = {}) {
 }
 
 function Gauge(holder, value) {
+  if (value == null) {
+    holder.innerHTML = `<span class="ts-gauge-na mono dim" style="display:flex;width:84px;height:84px;align-items:center;justify-content:center">—&nbsp;n/a</span>`;
+    return;
+  }
   const size = 84;
   const v = Math.max(0, Math.min(100, Math.round(value)));
   const stroke = 8;

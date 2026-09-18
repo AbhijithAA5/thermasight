@@ -1,13 +1,21 @@
 """ThermaSight — ingestion. Parses any CSV conforming to the YUKTHI 2026 data
-contract: columns identified by name (case/whitespace tolerant), record
-identity is (equipment_id, timestamp), no hard-coded rows or timestamps."""
+contract: columns identified by name (case/whitespace/unit-annotation
+tolerant), record identity is (equipment_id, timestamp), no hard-coded rows or
+timestamps.
+
+Robustness contract (per the challenge documents): `timestamp`, `equipment_id`
+and `Chiller Energy Consumption` are required (the third is the analysis
+target). Every other measurement column is OPTIONAL — a missing column is
+treated as entirely-missing data, reported in the quality report, and excluded
+from modeling instead of failing the upload.
+"""
 
 from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
 
-from .types import EQUIPMENT_COL, NUMERIC_COLS, TIMESTAMP_COL, Series
+from .types import EQUIPMENT_COL, NUMERIC_COLS, TARGET_COL, TIMESTAMP_COL, Series
 
 
 class DatasetError(Exception):
@@ -85,30 +93,44 @@ def _split_csv(text: str):
     return rows
 
 
-def _map_columns(headers: list[str]) -> dict[str, int]:
+def _map_columns(headers: list[str]) -> tuple[dict[str, int], list[str]]:
+    """Map headers to the contract and report which measurement columns are
+    entirely absent (they degrade to all-missing instead of failing)."""
     idx = [_norm(h) for h in headers]
-    wanted = [TIMESTAMP_COL, EQUIPMENT_COL] + NUMERIC_COLS
+
+    def head_names() -> str:
+        return ", ".join(headers) if headers else "(none — the file appears to have no header row)"
+
     mapping: dict[str, int] = {}
-    for w in wanted:
+    for w in [TIMESTAMP_COL, EQUIPMENT_COL] + NUMERIC_COLS:
         key = _norm(w)
         if key in idx:
             mapping[w] = idx.index(key)
-    missing = [w for w in wanted if w not in mapping]
-    if missing:
+
+    required_missing = [w for w in (TIMESTAMP_COL, EQUIPMENT_COL, TARGET_COL) if w not in mapping]
+    if required_missing:
         raise DatasetError(
-            "Missing required column(s): " + ", ".join(missing) + ". "
-            "Expected: " + ", ".join(wanted) + " (per the YUKTHI 2026 data specification)."
+            "Missing required column(s): "
+            + ", ".join(required_missing)
+            + f". Found columns in your file: {head_names()}. "
+            "Per the YUKTHI 2026 data specification, timestamp, equipment_id "
+            "and a 'Chiller Energy Consumption' column are required; the other "
+            "measurement columns may be provided as available, but blank "
+            "values are also accepted."
         )
-    return mapping
+    missing_measurements = [w for w in NUMERIC_COLS if w not in mapping]
+    return mapping, missing_measurements
 
 
 def build_dataset(text: str, file_name: str) -> dict:
     rows = _split_csv(text)
     if not rows:
-        raise DatasetError("The file appears to be empty.")
+        raise DatasetError("The file appears to be empty. Upload a CSV with a header row and at least one observation.")
+    if len(rows) == 1:
+        raise DatasetError("The file has a header row but no observations.")
     headers = [h.strip() for h in rows[0]]
     body = rows[1:]
-    col_idx = _map_columns(headers)
+    col_idx, missing_measurements = _map_columns(headers)
     t_i = col_idx[TIMESTAMP_COL]
     e_i = col_idx[EQUIPMENT_COL]
 
@@ -153,7 +175,12 @@ def build_dataset(text: str, file_name: str) -> dict:
                     g.observed[c].append(0)
 
     if not groups:
-        raise DatasetError("No valid observations found in the file.")
+        raise DatasetError(
+            "No valid observations found in the file: every row failed timestamp "
+            "or equipment_id parsing. Timestamps must look like '2019-08-18 00:00:00'."
+            if bad_rows
+            else "The file does not contain any (equipment_id, timestamp) rows."
+        )
 
     # Sort each unit chronologically and dedupe identical timestamps.
     for g in groups.values():
@@ -202,6 +229,7 @@ def build_dataset(text: str, file_name: str) -> dict:
         "periodStart": period_start,
         "periodEnd": period_end,
         "missingByColumn": missing_by_column,
+        "missingColumns": missing_measurements,  # entirely absent measurement columns
         "duplicatePairs": duplicate_pairs,
         "gapCount": gap_count,
         "maxGapHours": round(max_gap_hours * 10) / 10,
