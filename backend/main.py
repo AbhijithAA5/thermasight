@@ -127,6 +127,8 @@ def get_result(result_id: str) -> JSONResponse:
             "episodes": rep["episodes"],
             "energyTotalKwh": rep["energyTotalKwh"],
             "energyMeanKwh": rep["energyMeanKwh"],
+            "maintenance": rep.get("maintenance"),
+            "daily": rep.get("daily", {"days": [], "energy": [], "seasonal": [], "residZ": []}),
             "count": rep["count"],
             "timeStart": rep["times"][0],
             "timeEnd": rep["times"][-1],

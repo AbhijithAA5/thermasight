@@ -42,6 +42,8 @@ def _insufficient_report(s: Series, reason: str) -> dict:
         "count": n,
         "times": list(s.times),
         "values": {c: [None] * n for c in NUMERIC_COLS},
+        "maintenance": None,
+        "daily": {"days": [], "energy": [], "seasonal": [], "residZ": []},
         "modelFeatures": {"if": 0, "mlp": 0},
     }
 
@@ -106,6 +108,63 @@ def _run_equipment(s: Series, nominal_minutes: int) -> dict:
     health = compute_health(s.times, scored["score"], trend)
     stats = equipment_stats(s)
 
+    # ---- seasonal degradation + predictive maintenance summary ----
+    # Per calendar day: mean actual energy, mean seasonally-adjusted residual
+    # z, and a 45-day-centred seasonal baseline of the unit's own energy.
+    day_index: dict[int, list[int]] = {}
+    for i in range(len(s.times)):
+        day_index.setdefault(int(s.times[i] // 86_400_000), []).append(i)
+    day_ms = sorted(day_index)
+    d_energy: list[float] = []
+    d_resid: list[float] = []
+    raw_en = imputed.data[TARGET_COL]
+    for d in day_ms:
+        idx = day_index[d]
+        d_energy.append(float(np.mean([raw_en[i] for i in idx])))
+        d_resid.append(float(np.mean([residual_z[i] for i in idx])))
+    n_d = len(day_ms)
+    d_season: list[float] = []
+    for k in range(n_d):
+        lo = max(0, k - 22)
+        hi = min(n_d, k + 23)
+        d_season.append(float(np.median(d_energy[lo:hi])))
+    # Last-90-day slope of the daily residual z (seasonally adjusted).
+    recent = max(0, n_d - 90)
+    xs = list(range(recent, n_d))
+    ys = d_resid[recent:]
+    slope = 0.0
+    if len(xs) >= 14:
+        mx = float(np.mean(xs))
+        my = float(np.mean(ys))
+        denom = sum((x - mx) ** 2 for x in xs) or 1.0
+        slope = float(sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / denom)
+    drift = float(np.mean(ys[-30:])) if ys else 0.0  # last-30-day residual level
+    if slope > 0:
+        horizon_days = max(7, min(365, int(1.5 / slope)))
+    else:
+        horizon_days = 365
+    if health < 70 or drift > 1.2 or slope > 0.015:
+        maint_status = "due"
+    elif drift > 0.7 or slope > 0.008:
+        maint_status = "recommended"
+    elif slope > 0.003 or drift > 0.3:
+        maint_status = "plan"
+    else:
+        maint_status = "ok"
+    maintenance = {
+        "status": maint_status,
+        "horizonDays": horizon_days,
+        "slopePerDay": round(slope * 1000) / 1000,
+        "recentDrift": round(drift * 100) / 100,
+    }
+    daily = {
+        "days": day_ms,
+        "energy": [round(x, 1) for x in d_energy],
+        "seasonal": [round(x, 1) for x in d_season],
+        "residZ": [round(x, 3) for x in d_resid],
+    }
+
+    # Episodes with interpretation.
     episodes: list[dict] = []
     for run in scored["runs"]:
         shell = episode_shell(s.equipment_id, run, s, scored["score"], scored["severity"])
@@ -148,6 +207,8 @@ def _run_equipment(s: Series, nominal_minutes: int) -> dict:
         "count": n,
         "times": s.times,
         "values": values_out,
+        "maintenance": maintenance,
+        "daily": daily,
         "modelFeatures": {"if": len(feats["ifNames"]), "mlp": len(feats["mlpNames"])},
     }
 

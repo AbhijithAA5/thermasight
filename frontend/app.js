@@ -287,6 +287,13 @@ function renderFleet() {
           </div>
         </div>
         <div class="mt-2" data-spark="${eq}"></div>
+        <div class="ts-degrade-wrap">
+          <div class="ts-pm-row">
+            <span class="ts-pm mono ts-pm-${rep.maintenance ? rep.maintenance.status : "ok"}">${pmLabel(rep.maintenance)}</span>
+            <span class="ts-degrade-cap mono">seasonal energy vs baseline</span>
+          </div>
+          <div data-degrade="${eq}"></div>
+        </div>
         <div class="ts-unit-foot">
           <button class="ts-link" data-open-unit="${eq}">Open unit →</button>
           ${worst ? `<button class="ts-link dim" data-open-episode="${worst.id}">${patternLabel(worst.patternTags[0] || "contextual_energy_spike")} · ${fmtTime(worst.startTime)}</button>` : ""}
@@ -341,6 +348,8 @@ function renderFleet() {
     fetchSeries(eq).then((p) => {
       const holder = $(`[data-spark="${eq}"]`);
       if (holder) Sparkline(holder, p, { color: s.equipment[eq].health != null && s.equipment[eq].health >= 60 ? "var(--ts-accent)" : "var(--ts-warn)" });
+      const dh = $(`[data-degrade="${eq}"]`);
+      if (dh) drawSeasonalDegrade(dh, s.equipment[eq].daily);
     });
   });
 
@@ -969,6 +978,94 @@ function Gauge(holder, value) {
       <path d="${arc(v / 100)}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round"/>
       <text x="${cx}" y="${cy - 2}" text-anchor="middle" class="ts-gauge-num" fill="${cssVar("--ts-text")}">${v}</text>
       <text x="${cx}" y="${cy + 16}" text-anchor="middle" class="ts-gauge-cap" fill="${cssVar("--ts-text-dim")}">health</text>
+    </svg>`;
+}
+
+function pmLabel(m) {
+  if (!m) return "PM: n/a";
+  const w = Math.max(1, Math.ceil(m.horizonDays / 7));
+  if (m.status === "due") return `PM: due · ~${w}w`;
+  if (m.status === "recommended") return `PM: recommended · ~${w}w`;
+  if (m.status === "plan") return `PM: plan · ~${w}w`;
+  return "PM: on track";
+}
+
+/* Seasonal degradation graph: daily mean energy vs the unit's 45-day
+   seasonal baseline. When the solid line climbs above the dashed baseline,
+   the unit is consuming more than its season expects — the degradation
+   signal the maintenance status comes from. */
+function drawSeasonalDegrade(holder, daily) {
+  if (!daily || !daily.days || daily.days.length < 7) {
+    holder.innerHTML = '<p class="ts-empty mono">insufficient history</p>';
+    return;
+  }
+  const width = 260;
+  const height = 56;
+  const n = daily.days.length;
+  const stride = Math.max(1, Math.ceil(n / width));
+  const t = [];
+  const en = [];
+  const se = [];
+  const lo = [];
+  const hi = [];
+  let prev = null;
+  for (let k = 0; k < n; k += stride) {
+    let s = 0;
+    let c = 0;
+    let l = Infinity;
+    let h = -Infinity;
+    let sesum = 0;
+    let sc = 0;
+    for (let i = k; i < Math.min(n, k + stride); i++) {
+      const e = daily.energy[i];
+      if (e === null || e === undefined) continue;
+      if (e < l) l = e;
+      if (e > h) h = e;
+      s += e;
+      c++;
+      const sv = daily.seasonal[i];
+      if (sv !== null && sv !== undefined) {
+        sesum += sv;
+        sc++;
+      }
+    }
+    if (c > 0) {
+      let m = s / c;
+      if (prev !== null) m = (prev + m * 2) / 3;
+      prev = m;
+      t.push(daily.days[k]);
+      en.push(m);
+      lo.push(l);
+      hi.push(h);
+      se.push(sc ? sesum / sc : m);
+    }
+  }
+  const loAll = Math.min(...lo, ...se);
+  const hiAll = Math.max(...hi, ...se);
+  const span = hiAll - loAll || 1;
+  const X = (ms) => ((ms - t[0]) / (t[t.length - 1] - t[0] || 1)) * (width - 2) + 1;
+  const Y = (v) => 3 + (1 - (v - loAll) / span) * (height - 6);
+  const line = t.map((ms, i) => `${i ? "L" : "M"}${X(ms).toFixed(1)},${Y(en[i]).toFixed(1)}`).join("");
+  const band =
+    t.map((ms, i) => `${i ? "L" : "M"}${X(ms).toFixed(1)},${Y(lo[i]).toFixed(1)}`).join("") +
+    " " +
+    t
+      .slice()
+      .reverse()
+      .map((ms, i) => {
+        const j = t.length - 1 - i;
+        return `L${X(ms).toFixed(1)},${Y(hi[j]).toFixed(1)}`;
+      })
+      .join("") +
+    " Z";
+  const sea = t.map((ms, i) => `${i ? "L" : "M"}${X(ms).toFixed(1)},${Y(se[i]).toFixed(1)}`).join("");
+  const ink = cssVar("--ts-text") || "#111111";
+  const grey = cssVar("--ts-text-mut") || "#8a8a8a";
+  holder.innerHTML = `
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" class="block" style="width:100%;height:auto">
+      <path d="${band}" fill="${ink}" opacity="0.06"/>
+      <path d="${sea}" fill="none" stroke="${grey}" stroke-width="1.1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+      <path d="${line}" fill="none" stroke="${ink}" stroke-width="1.3" vector-effect="non-scaling-stroke"/>
     </svg>`;
 }
 

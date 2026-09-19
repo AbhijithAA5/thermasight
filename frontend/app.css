@@ -73,6 +73,27 @@ body, .ts-page-bg {
 .ts-queue-action {
   border-left-color: var(--ts-danger);
 }
+/* predictive-maintenance chip + seasonal degradation graph */
+.ts-pm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.ts-pm {
+  font-size: 11px;
+  font-weight: 600;
+}
+.ts-pm-ok { color: var(--ts-ok); }
+.ts-pm-plan { color: var(--ts-warn); }
+.ts-pm-recommended { color: var(--ts-alert); }
+.ts-pm-due { color: var(--ts-danger); }
+.ts-degrade-cap {
+  font-size: 10px;
+  color: var(--ts-text-mut);
+  text-transform: lowercase;
+}
 
 /* ---- typography: every numeral is tabular ---- */
 .mono,
