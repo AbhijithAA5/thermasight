@@ -877,42 +877,65 @@ function Sparkline(holder, payload, opts = {}) {
   const flagColor = cssVar("--ts-danger");
   const t = [];
   const v = [];
+  const lo = [];
+  const hi = [];
   const n = times.length;
   const stride = Math.max(1, Math.ceil(n / width));
+  let prevMean = null;
   for (let k = 0; k < n; k += stride) {
-    let lo = Infinity;
-    let hi = -Infinity;
-    let tLo = 0;
-    let tHi = 0;
+    let loV = Infinity;
+    let hiV = -Infinity;
+    let sum = 0;
+    let cnt = 0;
     for (let i = k; i < Math.min(n, k + stride); i++) {
       const x = values[i];
       if (x === null || x === undefined) continue;
-      if (x < lo) { lo = x; tLo = times[i]; }
-      if (x > hi) { hi = x; tHi = times[i]; }
+      if (x < loV) loV = x;
+      if (x > hiV) hiV = x;
+      sum += x;
+      cnt++;
     }
-    if (lo !== Infinity) {
-      t.push(tLo, tHi);
-      v.push(lo, hi);
+    if (cnt > 0) {
+      let mean = sum / cnt;
+      if (prevMean !== null) mean = (prevMean + mean * 2) / 3; // 1-2-1 soften
+      prevMean = mean;
+      t.push(times[k]);
+      v.push(mean);
+      lo.push(loV);
+      hi.push(hiV);
     }
   }
   if (!t.length) {
     holder.innerHTML = "";
     return;
   }
-  const lo = Math.min(...v);
-  const hi = Math.max(...v);
-  const span = hi - lo || 1;
+  const loAll = Math.min(...lo);
+  const hiAll = Math.max(...hi);
+  const span = hiAll - loAll || 1;
   const X = (ms) => ((ms - t[0]) / (t[t.length - 1] - t[0] || 1)) * (width - 2) + 1;
-  const Y = (val) => 2 + (1 - (val - lo) / span) * (height - 4);
-  const path = t.map((ms, i) => `${i ? "L" : "M"}${X(ms).toFixed(1)},${Y(v[i]).toFixed(1)}`).join("");
+  const Y = (val) => 2 + (1 - (val - loAll) / span) * (height - 4);
+  const linePath = t.map((ms, i) => `${i ? "L" : "M"}${X(ms).toFixed(1)},${Y(v[i]).toFixed(1)}`).join("");
+  const bandPath =
+    t.map((ms, i) => `${i ? "L" : "M"}${X(ms).toFixed(1)},${Y(lo[i]).toFixed(1)}`).join("") +
+    " " +
+    t
+      .slice()
+      .reverse()
+      .map((ms, i) => {
+        const j = t.length - 1 - i;
+        return `L${X(ms).toFixed(1)},${Y(hi[j]).toFixed(1)}`;
+      })
+      .join("") +
+    " Z";
   const flags = ids
     .map((code, i) => (code > 0 ? `${X(times[i]).toFixed(1)},${height - 4}` : null))
     .filter(Boolean)
     .join(" ");
   holder.innerHTML = `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true" class="block" style="width:100%;height:auto">
-      <path d="${path} L${X(t[t.length - 1])},${height} L${X(t[0])},${height} Z" fill="${color}" opacity="0.18"/>
-      <path d="${path}" fill="none" stroke="${color}" stroke-width="1.3" vector-effect="non-scaling-stroke"/>
+      <path d="${bandPath}" fill="${color}" opacity="0.08"/>
+      <path d="${linePath} L${X(t[t.length - 1])},${height} L${X(t[0])},${height} Z" fill="${color}" opacity="0.12"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.3" vector-effect="non-scaling-stroke"/>
       ${flags ? `<polygon points="${flags}" fill="${flagColor}" opacity="0.9"/>` : ""}
     </svg>`;
 }
@@ -980,16 +1003,21 @@ function TimeSeriesChart(holder, props) {
   const fullDomain = [times[0], times[times.length - 1]];
   const x = (ms) => CHART_PAD.l + ((ms - domain[0]) / (domain[1] - domain[0] || 1)) * CHART_INNER_W;
 
-  // min/max sampling per ~pixel
+  // smooth sampling per ~pixel: calm mean line + min/max envelope
   const sampled = sampleChart(times, values, 1200);
   let lo = Infinity;
   let hi = -Infinity;
   const pts = [];
-  for (const [i, val] of sampled) {
+  const bLo = [];
+  const bHi = [];
+  for (let k = 0; k < sampled.idx.length; k++) {
+    const i = sampled.idx[k];
     if (times[i] >= domain[0] && times[i] <= domain[1]) {
-      pts.push([i, val]);
-      if (val < lo) lo = val;
-      if (val > hi) hi = val;
+      pts.push([i, sampled.v[k]]);
+      bLo.push([i, sampled.loV[k]]);
+      bHi.push([i, sampled.hiV[k]]);
+      if (sampled.loV[k] < lo) lo = sampled.loV[k];
+      if (sampled.hiV[k] > hi) hi = sampled.hiV[k];
     }
   }
   if (!isFinite(lo)) { lo = 0; hi = 1; }
@@ -999,6 +1027,16 @@ function TimeSeriesChart(holder, props) {
   const y = (val) => CHART_PAD.t + (1 - (val - yLo) / (yHi - yLo || 1)) * CHART_INNER_H;
 
   const linePath = pts.map(([i, val], k) => `${k ? "L" : "M"}${x(times[i]).toFixed(1)},${y(val).toFixed(1)}`).join("");
+  const bandPath = bLo.length
+    ? bLo.map(([i, val], k) => `${k ? "L" : "M"}${x(times[i]).toFixed(1)},${y(val).toFixed(1)}`).join("") +
+      " " +
+      bHi
+        .slice()
+        .reverse()
+        .map(([i, val]) => `L${x(times[i]).toFixed(1)},${y(val).toFixed(1)}`)
+        .join("") +
+      " Z"
+    : "";
   const areaPath = pts.length
     ? `${linePath} L${x(times[pts[pts.length - 1][0]])},${CHART_PAD.t + CHART_INNER_H} L${x(times[pts[0][0]])},${CHART_PAD.t + CHART_INNER_H} Z`
     : "";
@@ -1023,6 +1061,7 @@ function TimeSeriesChart(holder, props) {
     const color = SEV_CHART[b.severity];
     html += `<g data-band="${b.id}" style="cursor:pointer"><rect x="${x0}" y="${CHART_PAD.t}" width="${w}" height="${CHART_INNER_H}" fill="${color}" opacity="${SEV_OPACITY[b.severity]}"/><line x1="${x0}" x2="${x1}" y1="${CHART_PAD.t + 3}" y2="${CHART_PAD.t + 3}" stroke="${color}" stroke-width="2" opacity="0.9"/></g>`;
   }
+  if (bandPath) html += `<path d="${bandPath}" fill="${cssVar("--ts-accent")}" opacity="0.06"/>`;
   html += `<path d="${areaPath}" fill="${cssVar("--ts-accent")}" opacity="0.12"/>`;
   html += `<path d="${linePath}" fill="none" stroke="${cssVar("--ts-accent")}" stroke-width="1.6"/>`;
   if (visibleBands.length < 40) {
@@ -1144,35 +1183,44 @@ function TimeSeriesChart(holder, props) {
 
 function sampleChart(times, values, px) {
   const n = times.length;
-  const out = [];
-  if (!n) return out;
+  const idx = [];
+  const v = [];
+  const loV = [];
+  const hiV = [];
+  if (!n) return { idx, v, loV, hiV };
   if (n <= px * 2) {
     for (let i = 0; i < n; i++) {
-      if (values[i] !== null && values[i] !== undefined) out.push([i, values[i]]);
+      if (values[i] !== null && values[i] !== undefined) {
+        idx.push(i);
+        v.push(values[i]);
+        loV.push(values[i]);
+        hiV.push(values[i]);
+      }
     }
-    return out;
+    return { idx, v, loV, hiV };
   }
   const stride = Math.ceil(n / px);
   for (let k = 0; k < n; k += stride) {
     let lo = Infinity;
     let hi = -Infinity;
-    let iLo = k;
-    let iHi = k;
+    let sum = 0;
+    let cnt = 0;
     for (let i = k; i < Math.min(n, k + stride); i++) {
       const x = values[i];
       if (x === null || x === undefined) continue;
-      if (x < lo) { lo = x; iLo = i; }
-      if (x > hi) { hi = x; iHi = i; }
+      if (x < lo) lo = x;
+      if (x > hi) hi = x;
+      sum += x;
+      cnt++;
     }
-    if (lo !== Infinity) {
-      if (iLo !== iHi) {
-        out.push([iLo, lo], [iHi, hi]);
-      } else {
-        out.push([iLo, lo]);
-      }
+    if (cnt > 0) {
+      idx.push(k);
+      v.push(sum / cnt);
+      loV.push(lo);
+      hiV.push(hi);
     }
   }
-  return out;
+  return { idx, v, loV, hiV };
 }
 
 /* ------------------------------ constants ------------------------------ */
